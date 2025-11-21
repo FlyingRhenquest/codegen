@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 #include <fr/codegen/data.h>
 #include <fr/codegen/parser.h>
+#include <fr/codegen/drivers.h>
 
 TEST(ParsingData, FullEnumData) {
   // Yes, this is legit -- strings separated by nothing concatinate
@@ -123,4 +124,24 @@ TEST(ParsingData, MultiEnum) {
   ASSERT_EQ(e.identifiers[1], "snapper");
   ASSERT_EQ(e.identifiers[2], "trout");
   ASSERT_EQ(e.identifiers[3], "larch");
+}
+
+TEST(ParsingData,HowAboutAClass) {
+  const std::string classCode(
+    "namespace monkey::bagel {"
+    "class Wibble {"
+    "public:"
+    "  std::string wobble(); "
+    "  int wibblewobble;"
+    "};");
+
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::ClassDriver data;
+  std::string result;
+  data.regParser(parser);
+  ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
+  ASSERT_EQ(data.classes.size(), 1);
+  ASSERT_EQ(data.classes[0].name, "Wibble");
+  ASSERT_EQ(data.classes[0].members.size(), 1);
+  ASSERT_EQ(data.classes[0].methods.size(), 1);
 }

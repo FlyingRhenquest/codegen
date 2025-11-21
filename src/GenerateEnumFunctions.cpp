@@ -32,6 +32,7 @@
 #include <boost/program_options.hpp>
 #include <fr/codegen/data.h>
 #include <fr/codegen/parser.h>
+#include <fr/codegen/drivers.h>
 #include <fstream>
 #include <iostream>
 #include <iterator>

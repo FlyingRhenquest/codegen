@@ -18,6 +18,7 @@ set(TEST_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/scope.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/ParserSignalTest.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/Data.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/templates.cpp
 )
 
 add_executable(CodegenTests

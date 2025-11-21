@@ -116,3 +116,32 @@ TEST(ParserSignals, NamespacedEnum) {
     colors.clear();
   }
 }
+
+// Verify a template class doesn't throw a monkey wrench into
+// our parsing
+TEST(ParserSignals, TemplateClassIgnored) {
+
+  std::string enumName;
+  std::vector<std::string> colors;
+  std::string code =
+ "namespace fun { template <typename Wombat> class OZAnimals { void help() { std::cout << \"HELP WOMBAT\" << std::endl ; }}; enum WombatColors { red, green, blue};}";
+
+  std::string result;
+
+  fr::codegen::parser::ParserDriver parser;
+
+  parser.enumPush.connect([&enumName](auto& name, auto /* notused */) {
+    enumName = name;
+  });
+
+  parser.enumIdentifier.connect([&colors](auto &name, auto &identifier) {
+    colors.push_back(identifier);
+  });
+
+  ASSERT_TRUE(parser.parse(code.begin(), code.end(), result));
+  ASSERT_EQ(enumName, "WombatColors");
+  ASSERT_EQ(colors.size(), 3);
+  ASSERT_EQ(colors[0], "red");
+  ASSERT_EQ(colors[1], "green");
+  ASSERT_EQ(colors[2], "blue");
+}

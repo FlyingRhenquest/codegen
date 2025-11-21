@@ -29,59 +29,6 @@ namespace fr::codegen {
     int scopeDepth; // ScopeDepth for this namespace
   };
   
-  /**
-   * Data for tracking the current namespace
-   */
-
-  class NamespaceData {
-  public:
-    // current scope depth
-    int scopeDepth;
-    std::vector<boost::signals2::connection> subscriptions;
-    std::vector<NamespaceEntry> namespaceStack;
-
-    void clear() {
-      unsubscribe();
-      scopeDepth = 0;
-      namespaceStack.clear();
-    };
-
-    void unsubscribe() {
-      for (auto subscription : subscriptions) {
-	subscription.disconnect();
-      }
-      subscriptions.clear();
-    }
-
-    // Run on scope pop, finds all namespaces with scope greater than
-    // current scope and removes them from the stack.
-    void cleanUpNamespaces() {
-      while(namespaceStack.size() > 0 && namespaceStack.back().scopeDepth >= scopeDepth) {	
-	namespaceStack.pop_back();
-      }
-    }
-    
-    // Register with Parser
-    void regParser(::fr::codegen::parser::ParserDriver &parser) {
-      clear();
-      auto scopePushSub = parser.incScope.connect([&](){ scopeDepth++; });
-      auto scopePopSub = parser.decScope.connect([&](){
-	scopeDepth--;
-	cleanUpNamespaces();
-      });
-      auto namespacePushSub = parser.namespacePush.connect([&](const std::string& name, int depth){
-	NamespaceEntry entry;
-	entry.name = name;
-	// When namespace is parsed, scope is 1 less than it will be inside the namespace, so
-	// we add one to the depth for cleanup recognition purposes.
-	entry.scopeDepth = depth + 1;
-	namespaceStack.push_back(entry);
-      });
-      subscriptions.push_back(scopePushSub);
-      subscriptions.push_back(scopePopSub);
-      subscriptions.push_back(namespacePushSub);
-    }
-  };
   
   /**
    * Data for enums collected from the parser in parser.h
@@ -120,108 +67,98 @@ namespace fr::codegen {
     }
   };
 
-  // Handles collecting enum and namespace data from the parser
+  /**
+   * MethodData -- Stores info on one class/struct method
+   *
+   * * Return Type
+   * * Method Name
+   * * public flag - True If method is public
+   * * protected flag - True if method is protected
+   * * Virtual flag - If method is listed as virtual or is overridden
+   * * Const flag - True if const
+   *
+   * Templated methods will currently be ignored.
+   */
 
-  // Note that currently this code is not tracking classes, so if your enum is in a class
-  // the generated code won't reference it correctly
 
-  class EnumDriver {
-
-    void copyNamespaces() {
-      for (auto it = namespaces.namespaceStack.begin(); it != namespaces.namespaceStack.end(); ++it) {	
-	currentEnum.namespaces.push_back(it->name);
-      }
-    }
-    
-    void handleStandardEnum(const std::string& name, int scopeDepth) {
-      copyNamespaces();
-      currentEnum.name = name;
-    }
-
-    void handleEnumClass(const std::string &name, int scopeDepth) {
-      copyNamespaces();	     
-      currentEnum.name = name;
-      currentEnum.isClassEnum = true;
-    }
-
-    void handleEnumIdentifier(const std::string& enumName, const std::string& identifier) {
-      currentEnum.identifiers.push_back(identifier);
-    }
-    
-  public:
-    NamespaceData namespaces;
-    // Temporary storage for the current working enum
-    EnumData currentEnum;
-    std::vector<boost::signals2::connection> subscriptions;
-
-    // Map of enums keyed by their fully qualified enum name (namespaces
-    // included.)
-    std::map<std::string, EnumData> enums;
-
-    // Register with the parser
-    void regParser(::fr::codegen::parser::ParserDriver &parser) {
-      // Reset the current enum to default values
-      currentEnum.clear();
-      
-      namespaces.regParser(parser);
-      // This is triggered when an enum (not enum class) is encountered
-      auto enumSub = parser.enumPush.connect([&](const std::string &name, int scopeDepth) {
-	handleStandardEnum(name, scopeDepth);
-      });
-      auto enumClassSub = parser.enumClassPush.connect([&](const std::string &name, int scopeDepth) {
-	handleEnumClass(name, scopeDepth);
-      });
-      // Due to the way the parser is structured, this will always run after we've set up a
-      // currentEnum.
-      auto enumIdentifierSub = parser.enumIdentifier.connect([&](const std::string &enumName,
-								 const std::string &identifier) {
-	handleEnumIdentifier(enumName, identifier);
-      });
-      // We need to check if we're in an enum whenever we see a scope pop and
-      // finalize our enum if we were working on one. There's nothing magic about scope
-      // pops after enums, it's just a standard decScope, so we need to check whenever we receive one.
-
-      // Note we don't have to do anything with namespaces though, as the namespace class also subscribes
-      // to the parser signal and does its own scopeDec handling.
-      auto enumScopePopSub = parser.decScope.connect([&] {
-	if (!currentEnum.name.empty()) {
-	  // Construct key for the map
-	  std::string namespaceKey;
-	  for (auto it = currentEnum.namespaces.begin(); it != currentEnum.namespaces.end(); ++it) {
-	    namespaceKey.append(*it);
-	    namespaceKey.append("::");
-	  }
-	  namespaceKey.append(currentEnum.name);
-	  enums[namespaceKey] = currentEnum;
-	  currentEnum.clear();
-	}
-      });
-      subscriptions.push_back(enumSub);
-      subscriptions.push_back(enumClassSub);
-      subscriptions.push_back(enumIdentifierSub);
-      subscriptions.push_back(enumScopePopSub);
-    }
-
-    // You have to be careful to unsubscribe with boost signals2 -- if this object
-    // goes out of scope with subscriptions enabled, you could get segfaults on
-    // future attempts to run the parser. So it's generally a good idea to
-    // track subscriptions, have an unsubscribe method like this and call it from
-    // the destructor.
-    void unsubscribe() {
-      for (auto subscription : subscriptions) {
-	subscription.disconnect();
-      }
-      subscriptions.clear();
-    }
-
-    // Clear all the storage -- handy to reset the object for another parser run
-    void clear() {
-      unsubscribe();
-      namespaces.clear();
-      currentEnum.clear();
-      enums.clear();
-    }
-    
+  struct MethodData {
+    std::string returnType;
+    std::string name;
+    bool isPublic;
+    bool isProtected;
+    bool isVirtual;
+    bool isConst;
+    bool isStatic;
   };
-  
+
+  /**
+   * MemberData -- Stores info on one member
+   * * Type
+   * * MemberName
+   * * public flag - True if public
+   * * protected flag - True if protected
+   * * Const flag - True if const
+   * * Static flag - true if static
+   * * Ref flag - True if reference
+   * * Ptr flag - True if pointer
+   *
+   * Notes: Shared/Unique pointers will have that for their type but ptr/ref
+   *        flags will not be set unless they're pointers/references to shared/unique
+   *        pointers.
+   *
+   *        I may decide to only support one level of pointer indirection.
+   */
+
+  struct MemberData {
+    std::string type;
+    std::string name;
+    bool isPublic;
+    bool isProtected;
+    bool isConst;
+    bool isStatic;
+  };
+
+  /**
+   * ClassData - Stores info on a struct/class
+   * * Namespaces vector (Same as enum)
+   * * Class name
+   * * Class parents - Vector of strings, empty if none (does not pay attention to public/protected/private)
+   * * Vector of MethodData
+   * * Vector of MemberData
+   * * bool isStruct - True if struct
+   */
+
+  struct ClassData {
+    std::vector<std::string> namespaces;
+    std::string name;
+    std::vector<std::string> parents;
+    std::vector<MethodData> methods;
+    std::vector<MemberData> members;
+    bool isStruct;
+
+    // Yes, this is the same function as EnumNamespace
+    // and yes, I am OK with that. If I need one more
+    // I'll refactor into a namespace object
+    std::string classNamespace() {
+      std::string ret;
+      for (auto n = namespaces.begin(); n != namespaces.end(); ++n) {
+	if (ret.size()) {
+	  ret.append("::");
+	}
+	ret.append(*n);
+      }
+      return ret;
+    }
+
+    void clear() {
+      namespaces.clear();
+      name.clear();
+      parents.clear();
+      methods.clear();
+      members.clear();
+      isStruct = false;
+    }
+  };
+
+
 }

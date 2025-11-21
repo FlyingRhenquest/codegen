@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <iostream>
+
 #include <boost/signals2.hpp>
 #include <boost/spirit/home/x3.hpp>
 #include <string>
@@ -46,8 +48,37 @@ namespace fr::codegen::parser {
 
   x3::rule<class ClassKeyword> const classKeyword = "class_keyword";
   auto const classKeyword_def = x3::lit("class");
+
+  x3::rule<class StructKeyword> const structKeyword = "struct_keyword";
+  auto const structKeyword_def = x3::lit("struct");
+
+  x3::rule<class TemplateKeyword> const templateKeyword = "template_keyword";
+  auto const templateKeyword_def = x3::lit("template");
+
+  x3::rule<class ConstKeyword> const constKeyword = "const_keyword";
+  auto const constKeyword_def = x3::lit("const");
+
+  x3::rule<class StaticKeyword> const staticKeyword = "static_keyword";
+  auto const staticKeyword_def = x3::lit("static");
+
+  x3::rule<class PublicKeyword> const publicKeyword = "public_keyword";
+  auto const publicKeyword_def = x3::lit("public");
+
+  x3::rule<class PrivateKeyword> const privateKeyword = "private_keyword";
+  auto const privateKeyword_def = x3::lit("private");
+
+  x3::rule<class ProtectedKeyword> const protectedKeyword = "protected_keyword";
+  auto const protectedKeyword_def = x3::lit("protected");
+
+  x3::rule<class VirtualKeyword> const virtualKeyword = "virtual_keyword";
+  auto const virtualKeyword_def = x3::lit("virtual");
+
+  x3::rule<class OverrideKeyword> const overrideKeyword = "override_keyword";
+  auto const overrideKeyword_def = x3::lit("override");
   
-  BOOST_SPIRIT_DEFINE(namespaceKeyword, enumKeyword, classKeyword);
+  BOOST_SPIRIT_DEFINE(namespaceKeyword, enumKeyword, classKeyword, structKeyword,
+		      templateKeyword, constKeyword, staticKeyword, publicKeyword,
+		      privateKeyword, protectedKeyword, virtualKeyword, overrideKeyword);
 
   // Keywords I don't particularly care about (right now) but that you're likely
   // to encounter before you hit your enum declarations
@@ -61,14 +92,33 @@ namespace fr::codegen::parser {
   x3::rule<class IncludePath> const includePath = "include_path";
   auto const includePath_def = +(x3::lit("/") | x3::lit(".") | x3::alnum);
 
-  BOOST_SPIRIT_DEFINE(pragmaKeyword, includeKeyword, includePath);
+  // Template guts -- ignore everything from < to >
+  // We do have to pay attention to < level in the template, which
+  // will basically be identified as "more template guts."
+  // We are ignoring everything in a template declaration for the
+  // foreseeable future
+
+  x3::rule<class TemplateGuts> const templateGuts = "template_guts";
+  auto const templateGuts_def = x3::lexeme[x3::char_("<") >>
+       *(x3::char_ - x3::char_("<>")) >> *templateGuts | x3::char_(">")];
+
+  x3::rule<class MethodGuts> const methodGuts = "method_guts";
+  auto const methodGuts_def = x3::lexeme[x3::char_('{') >>
+       *(x3::char_ - x3::char_("{}")) >>
+	x3::char_('}')];
+  
+  BOOST_SPIRIT_DEFINE(pragmaKeyword, includeKeyword, includePath, templateGuts);
   
   // Identifier
 
   x3::rule<class Identifier,std::string> const identifier = "identifier";
-  auto const identifier_def = x3::lexeme[x3::alpha >> *(x3::alnum | '_')];
+  auto const identifier_def = x3::lexeme[x3::alpha >> *(x3::alnum | x3::char_('_'))];
 
-  BOOST_SPIRIT_DEFINE(identifier);
+  // Identifier with maybe namespace and maybe template stuff
+  x3::rule<class EnhancedIdentifier,std::string> const enhancedIdentifier = "enhanced_identifier";
+  auto const enhancedIdentifier_def = x3::lexeme[x3::alpha >> *(x3::alnum | x3::char_("<>:&*"))];
+
+  BOOST_SPIRIT_DEFINE(identifier, enhancedIdentifier);
   
   // Scope stuff
 
@@ -108,8 +158,48 @@ namespace fr::codegen::parser {
     boost::signals2::signal<void(const std::string&, int)> enumClassPush;
     // Enum identifier signal. This supplies the enum name and the identifier
     // name we just parsed. It would easy to extend this to include the
-    // value as well, but I'm not doing anything with those currently
+    // value as well, but I'm not doing anything with those currently    
     boost::signals2::signal<void(const std::string&, const std::string&)> enumIdentifier;
+    // Called when we encounter a non-template class declaration. The
+    // callback parameters are the class name and the current scope depth.
+    boost::signals2::signal<void(const std::string&, int)> classPush;
+    // Signals that we're done with the current class we're parsing
+    boost::signals2::signal<void()> classPop;
+    // Called when we encounter a non-template struct declaraction.
+    boost::signals2::signal<void(const std::string&, int)> structPush;
+    // Called for a class parent
+    boost::signals2::signal<void(const std::string&)> privateClassParent;
+    boost::signals2::signal<void(const std::string&)> protectedClassParent;
+    boost::signals2::signal<void(const std::string&)> publicClassParent;
+    // Signals for changing current privacy level in a class
+    boost::signals2::signal<void()> privateInClass;
+    boost::signals2::signal<void()> protectedInClass;
+    boost::signals2::signal<void()> publicInClass;
+    // Signals that we've discovered a member
+    // parameters are inClassConst, inClassStatic, member type, member name
+    boost::signals2::signal<void(bool, bool, const std::string&, const std::string&)> memberFound;
+    // Signals that we've discovered a method
+    // parameters are inClassConst, inClassStatic, inClassVirtual, returnType, methodName
+    boost::signals2::signal<void(bool, bool, bool, const std::string&, const std::string&)> methodFound;
+
+    // Some things to track keywords inside a class. These will be set/reset
+    // when we run across things like "const", "static", "virtual" or "override"
+    bool inClassConst;
+    bool inClassStatic;
+    bool inClassVirtual;
+
+    // Store the name of a member or method type
+    std::string inClassEnhancedIdentifier;
+    // Store the name of a member or method
+    std::string inClassIdentifier;
+
+    void resetInClassFlags() {
+      inClassConst = false;
+      inClassStatic = false;
+      inClassVirtual = false;
+      inClassEnhancedIdentifier = "";
+      inClassIdentifier = "";
+    }
 
     // Shovels data into x3's parser and fires signals. Result will contain any
     // leftover characters. This function works similarly to the boost::spirit::x3
@@ -117,6 +207,7 @@ namespace fr::codegen::parser {
     template <typename Iterator>
     bool parse(Iterator first, Iterator last, std::string& result) {
       int scopeDepth = 0;
+      resetInClassFlags();
       // If we're in an enum scope, currentEnumName will be the name of the
       // current enum.
       std::string currentEnumName;
@@ -160,6 +251,85 @@ namespace fr::codegen::parser {
 	x3::_attr(ctx) = "";
       };
 
+      auto handleClassPush = [&](auto& ctx) {
+	std::cout << "handleClassPush" << std::endl;
+	classPush(x3::_attr(ctx), scopeDepth);
+	x3::_attr(ctx) = "";
+      };
+
+      auto handleClassPop = [&]() {
+	std::cout << "handleClassPop" << std::endl;
+	classPop();
+      };
+
+      auto handlePrivateClassParent = [&](auto& ctx) {
+	privateClassParent(x3::_attr(ctx));
+	x3::_attr(ctx) = "";
+      };
+
+      auto handleProtectedClassParent = [&](auto& ctx) {
+	protectedClassParent(x3::_attr(ctx));
+	x3::_attr(ctx) = "";
+      };
+
+      auto handlePublicClassParent = [&](auto& ctx) {
+	publicClassParent(x3::_attr(ctx));
+	x3::_attr(ctx) = "";
+      };
+
+      auto handlePublicInClass = [&]() {
+	std::cout << "handlePublicInClass" << std::endl;
+	publicInClass();
+      };
+
+      auto handleProtectedInClass = [&] () {
+	protectedInClass();
+      };
+
+      auto handlePrivateInClass = [&]() {
+	privateInClass();
+      };
+
+      auto handleStaticMember = [&]() {
+	inClassStatic = true;
+      };
+
+      auto handleVirtualMember = [&](){
+	inClassVirtual = true;
+      };
+
+      auto handleConstMember = [&]() {
+	inClassConst = true;
+      };
+				      
+      auto handleInClassEnhancedIdentifier = [&](auto& ctx) {
+	std::cout << "handleInClassEnhancedIdentifier -- " << x3::_attr(ctx) << std::endl;
+	inClassEnhancedIdentifier = x3::_attr(ctx);
+	x3::_attr(ctx) = "";
+      };
+      
+      auto handleInClassIdentifier = [&](auto& ctx) {
+	std::cout << "handleInClassIdentifier -- " << x3::_attr(ctx) << std::endl;
+	inClassIdentifier = x3::_attr(ctx);
+	x3::_attr(ctx) = "";
+      };
+
+      auto handleMemberFound = [&]() {
+	std::cout << "handlemMemberFound -- " << inClassEnhancedIdentifier << " " << inClassIdentifier << std::endl;
+	memberFound(inClassConst, inClassStatic, inClassEnhancedIdentifier, inClassIdentifier);
+	resetInClassFlags();
+      };
+
+      auto handleMethodFound = [&](){
+	std::cout << "handleMethodFound" << std::endl;
+	methodFound(inClassConst, inClassStatic, inClassVirtual, inClassEnhancedIdentifier, inClassIdentifier);
+	resetInClassFlags();
+      };
+
+      auto handleParameterGrammar = [&]() {
+	std::cout << "handleParameterGrammar" << std::endl;
+      };
+
       // Some grammars I'm ignoring right now
       auto const pragmaOnceGrammar =
 	x3::lexeme[ pragmaKeyword >> x3::lit(" ") >> x3::lit("once")];
@@ -196,13 +366,76 @@ namespace fr::codegen::parser {
 	scopePop [ handleScopePop ] >>
 	x3::lit(";");
 
-      auto const programGrammar = * (
-				    scopePush |
-				    namespaceGrammar |
-				    enumGrammar |
-				    enumClassGrammar |
-				    scopePop);
+      // Template class grammar -- identify a template class such that we can just straight
+      // up ignore it. You should really not point this parser at a file that has them and
+      // just just keep your data objects that you want to generate code for separate from
+      // more complex things, but I'll try to handle what I can.
+      auto const templateClassGrammar =
+	templateKeyword >>
+	templateGuts >>
+	(classKeyword | structKeyword) >>
+	identifier >>
+	// Don't want to trigger a scope push here
+	x3::lit("{") >> 
+	// Now we'll just ignore everything we see down to the "};" This strategy won't work
+	// if you're putting classes and enums in your template classes, but that's what you
+	// get for not listening to me about separating your data objects out.
+	*(x3::char_ - "};") >>
+	x3::lit("};");
 
+      auto const privateClassParentGrammar =
+	-privateKeyword >>
+	identifier [handlePrivateClassParent];
+
+      auto const protectedClassParentGrammar =
+	protectedKeyword >>
+	identifier [handleProtectedClassParent];
+
+      auto const publicClassParentGrammar =
+	publicKeyword >>
+	identifier [handlePublicClassParent];
+
+      auto const enhancedIdIdGrammar =
+	enhancedIdentifier [handleInClassEnhancedIdentifier] >>
+	identifier [handleInClassIdentifier];
+
+      // Simply eat everything in the parameter list. It wouldn't be terribly difficult
+      // to parse out, I just don't particualrly need it for anything.
+      auto const parameterGrammar = x3::char_('(') >> *(x3::char_ - x3::char_(')')) >> x3::char_(')');
+
+      auto const methodOrMember =
+        *(staticKeyword [handleStaticMember] | constKeyword [handleConstMember] | virtualKeyword [handleVirtualMember] ) >>
+	enhancedIdIdGrammar >>
+        (x3::char_(';') [handleMemberFound] | (
+             parameterGrammar [handleParameterGrammar] >>
+             -overrideKeyword [handleVirtualMember] >>            
+             -(x3::char_(';') [handleMethodFound])));
+        
+      auto echoClass = [&]() { std::cout << "class Keyword" << std::endl; };
+      
+      auto const classGrammar =
+	classKeyword [echoClass] >>
+	identifier [handleClassPush] >>
+	-(x3::lit(":") >> +(privateClassParentGrammar | protectedClassParentGrammar | publicClassParentGrammar >> *x3::lit(","))) >>
+	x3::lit("{") >>
+	* (
+	   (publicKeyword [handlePublicInClass] >> x3::lit(":")) |
+	   (protectedKeyword [handleProtectedInClass] >> x3::lit(":")) |
+	   (privateKeyword [handlePrivateInClass] >> x3::lit(":")) |
+	   methodOrMember
+	   ) >>
+	x3::lit("};") [handleClassPop];
+	
+		
+      auto const programGrammar = * (
+				     scopePush |
+				     namespaceGrammar |
+				     enumGrammar |
+				     enumClassGrammar |
+				     templateClassGrammar |
+				     classGrammar |
+				     scopePop);
+      
       auto const ignoreStuff =
 	blockComment |
 	singleLineComment |

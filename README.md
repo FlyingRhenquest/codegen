@@ -34,19 +34,23 @@ This program requires boost::spirit::x3, boost::program_options and
 boost::signals2. If you have a fairly recent boost installed somehwere
 that CMake can find it, you should be able to build it with:
 
- mkdir /tmp/build
- cd /tmp/build
- cmake ~/sandbox/codegen
- sudo make install
+```
+mkdir /tmp/build
+cd /tmp/build
+cmake ~/sandbox/codegen
+sudo make install
+```
  
 The example should be built separately once the GenerateEnumFunctions
 program has been installed in your path:
 
+```
  mkdir /tmp/build\_examples
  cd /tmp/build\_examples
  cmake ~/sandbox/codegen/examples/enum\_example
  make
  ./enum\_example
+```
 
 If you modify the parser and rebuild GenerateEnumFunctions, you'll need
 to rerun cmake for the examples. I plan to add some CMake integration
