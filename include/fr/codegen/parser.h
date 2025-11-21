@@ -102,12 +102,14 @@ namespace fr::codegen::parser {
   auto const templateGuts_def = x3::lexeme[x3::char_("<") >>
        *(x3::char_ - x3::char_("<>")) >> *templateGuts | x3::char_(">")];
 
-  x3::rule<class MethodGuts> const methodGuts = "method_guts";
-  auto const methodGuts_def = x3::lexeme[x3::char_('{') >>
-       *(x3::char_ - x3::char_("{}")) >>
-	x3::char_('}')];
+  // Ignore the next scope and all the scopes inside it
+  x3::rule<class IgnoreScopes> const ignoreScopes = "ignore_scopes";
+  auto const ignoreScopes_def =
+    x3::lexeme[x3::char_('{') >>
+               *((x3::char_ - x3::char_("{}")) >> *ignoreScopes) >>
+               x3::char_("}")];
   
-  BOOST_SPIRIT_DEFINE(pragmaKeyword, includeKeyword, includePath, templateGuts);
+  BOOST_SPIRIT_DEFINE(pragmaKeyword, includeKeyword, includePath, templateGuts, ignoreScopes);
   
   // Identifier
 
@@ -406,10 +408,10 @@ namespace fr::codegen::parser {
       auto const methodOrMember =
         *(staticKeyword [handleStaticMember] | constKeyword [handleConstMember] | virtualKeyword [handleVirtualMember] ) >>
 	enhancedIdIdGrammar >>
-        (x3::char_(';') [handleMemberFound] | (
+        -x3::char_(';') [handleMemberFound] | (
              parameterGrammar [handleParameterGrammar] >>
              -overrideKeyword [handleVirtualMember] >>            
-             -(x3::char_(';') [handleMethodFound])));
+             -(x3::char_(';') | ignoreScopes)[handleMethodFound]);
         
       auto echoClass = [&]() { std::cout << "class Keyword" << std::endl; };
       
@@ -419,9 +421,12 @@ namespace fr::codegen::parser {
 	-(x3::lit(":") >> +(privateClassParentGrammar | protectedClassParentGrammar | publicClassParentGrammar >> *x3::lit(","))) >>
 	x3::lit("{") >>
 	* (
+           // For the purposes of this parser I can pretty much just ignore templates.
+           // Template methods will still show up in methods
+           (templateKeyword >> templateGuts) |
 	   (publicKeyword [handlePublicInClass] >> x3::lit(":")) |
 	   (protectedKeyword [handleProtectedInClass] >> x3::lit(":")) |
-	   (privateKeyword [handlePrivateInClass] >> x3::lit(":")) |
+	   (privateKeyword [handlePrivateInClass] >> x3::lit(":")) |          
 	   methodOrMember
 	   ) >>
 	x3::lit("};") [handleClassPop];

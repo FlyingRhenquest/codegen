@@ -144,4 +144,61 @@ TEST(ParsingData,HowAboutAClass) {
   ASSERT_EQ(data.classes[0].name, "Wibble");
   ASSERT_EQ(data.classes[0].members.size(), 1);
   ASSERT_EQ(data.classes[0].methods.size(), 1);
+  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
+  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
+}
+
+TEST(ParsingData,ClassWithInlineMethod) {
+  const std::string classCode(
+    "namespace monkey::bagel {"
+    "class Wibble {"
+    "public:"
+    "  int wibblewobble;"
+    "  std::string wobble() { "
+    "     std::string ret = \"This should be ignored by the parser\";"
+    "     if (wibblewobble) {"
+    "        std::cout << ret << std::endl;"
+    "      }"
+    "  }"
+    "};");
+
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::ClassDriver data;
+  std::string result;
+  data.regParser(parser);
+  ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
+  ASSERT_EQ(data.classes.size(), 1);
+  ASSERT_EQ(data.classes[0].name, "Wibble");
+  ASSERT_EQ(data.classes[0].members.size(), 1);
+  ASSERT_EQ(data.classes[0].methods.size(), 1);
+  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
+  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
+}
+
+TEST(ParsingData,ClassTemplateMethod) {
+  const std::string classCode(
+    "namespace monkey::bagel {"
+    "class Wibble {"
+    "public:"
+    "  int wibblewobble;"
+    "  template <typename T>"
+    "  std::string wobble(T& pleh) { "
+    "     std::string ret = \"This should be ignored by the parser\";"
+    "     if (wibblewobble) {"
+    "        std::cout << ret << std::endl;"
+    "      }"
+    "  }"
+    "};");
+
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::ClassDriver data;
+  std::string result;
+  data.regParser(parser);
+  ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
+  ASSERT_EQ(data.classes.size(), 1);
+  ASSERT_EQ(data.classes[0].name, "Wibble");
+  ASSERT_EQ(data.classes[0].members.size(), 1);
+  ASSERT_EQ(data.classes[0].methods.size(), 1);
+  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
+  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
 }
