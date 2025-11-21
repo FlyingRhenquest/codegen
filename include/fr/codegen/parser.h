@@ -254,13 +254,11 @@ namespace fr::codegen::parser {
       };
 
       auto handleClassPush = [&](auto& ctx) {
-	std::cout << "handleClassPush" << std::endl;
 	classPush(x3::_attr(ctx), scopeDepth);
 	x3::_attr(ctx) = "";
       };
 
       auto handleClassPop = [&]() {
-	std::cout << "handleClassPop" << std::endl;
 	classPop();
       };
 
@@ -280,7 +278,6 @@ namespace fr::codegen::parser {
       };
 
       auto handlePublicInClass = [&]() {
-	std::cout << "handlePublicInClass" << std::endl;
 	publicInClass();
       };
 
@@ -305,31 +302,23 @@ namespace fr::codegen::parser {
       };
 				      
       auto handleInClassEnhancedIdentifier = [&](auto& ctx) {
-	std::cout << "handleInClassEnhancedIdentifier -- " << x3::_attr(ctx) << std::endl;
 	inClassEnhancedIdentifier = x3::_attr(ctx);
 	x3::_attr(ctx) = "";
       };
       
       auto handleInClassIdentifier = [&](auto& ctx) {
-	std::cout << "handleInClassIdentifier -- " << x3::_attr(ctx) << std::endl;
 	inClassIdentifier = x3::_attr(ctx);
 	x3::_attr(ctx) = "";
       };
 
       auto handleMemberFound = [&]() {
-	std::cout << "handlemMemberFound -- " << inClassEnhancedIdentifier << " " << inClassIdentifier << std::endl;
 	memberFound(inClassConst, inClassStatic, inClassEnhancedIdentifier, inClassIdentifier);
 	resetInClassFlags();
       };
 
       auto handleMethodFound = [&](){
-	std::cout << "handleMethodFound" << std::endl;
 	methodFound(inClassConst, inClassStatic, inClassVirtual, inClassEnhancedIdentifier, inClassIdentifier);
 	resetInClassFlags();
-      };
-
-      auto handleParameterGrammar = [&]() {
-	std::cout << "handleParameterGrammar" << std::endl;
       };
 
       // Some grammars I'm ignoring right now
@@ -409,14 +398,12 @@ namespace fr::codegen::parser {
         *(staticKeyword [handleStaticMember] | constKeyword [handleConstMember] | virtualKeyword [handleVirtualMember] ) >>
 	enhancedIdIdGrammar >>
         -x3::char_(';') [handleMemberFound] | (
-             parameterGrammar [handleParameterGrammar] >>
+             parameterGrammar  >>
              -overrideKeyword [handleVirtualMember] >>            
              -(x3::char_(';') | ignoreScopes)[handleMethodFound]);
         
-      auto echoClass = [&]() { std::cout << "class Keyword" << std::endl; };
-      
       auto const classGrammar =
-	classKeyword [echoClass] >>
+	classKeyword >>
 	identifier [handleClassPush] >>
 	-(x3::lit(":") >> +(privateClassParentGrammar | protectedClassParentGrammar | publicClassParentGrammar >> *x3::lit(","))) >>
 	x3::lit("{") >>
