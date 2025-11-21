@@ -142,10 +142,14 @@ TEST(ParsingData,HowAboutAClass) {
   ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
   ASSERT_EQ(data.classes.size(), 1);
   ASSERT_EQ(data.classes[0].name, "Wibble");
+  ASSERT_FALSE(data.classes[0].serializable);
   ASSERT_EQ(data.classes[0].members.size(), 1);
   ASSERT_EQ(data.classes[0].methods.size(), 1);
   ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
   ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
+  ASSERT_FALSE(data.classes[0].members[0].serializable);
+  ASSERT_FALSE(data.classes[0].members[0].generateGetter);
+  ASSERT_FALSE(data.classes[0].members[0].generateSetter);
 }
 
 TEST(ParsingData,ClassWithInlineMethod) {
@@ -201,4 +205,35 @@ TEST(ParsingData,ClassTemplateMethod) {
   ASSERT_EQ(data.classes[0].methods.size(), 1);
   ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
   ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
+}
+
+TEST(ParsingData,ClassAnnotation) {
+  const std::string classCode(
+    "namespace monkey::bagel {"
+    "[[cereal]] class Wibble {"
+    "public:"
+    "  [[cereal,get,set]] int wibblewobble;"
+    "  std::string wobble() { "
+    "     std::string ret = \"This should be ignored by the parser\";"
+    "     if (wibblewobble) {"
+    "        std::cout << ret << std::endl;"
+    "      }"
+    "  }"
+    "};");
+
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::ClassDriver data;
+  std::string result;
+  data.regParser(parser);
+  ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
+  ASSERT_EQ(data.classes.size(), 1);
+  ASSERT_EQ(data.classes[0].name, "Wibble");
+  ASSERT_TRUE(data.classes[0].serializable);
+  ASSERT_EQ(data.classes[0].members.size(), 1);
+  ASSERT_EQ(data.classes[0].methods.size(), 1);
+  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
+  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
+  ASSERT_TRUE(data.classes[0].members[0].serializable);
+  ASSERT_TRUE(data.classes[0].members[0].generateGetter);
+  ASSERT_TRUE(data.classes[0].members[0].generateSetter);
 }

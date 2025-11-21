@@ -80,6 +80,15 @@ namespace fr::codegen::parser {
 		      templateKeyword, constKeyword, staticKeyword, publicKeyword,
 		      privateKeyword, protectedKeyword, virtualKeyword, overrideKeyword);
 
+  // Annotations -- I'm adding a few that C++ should ignore but that I can use to tag
+  // classes or members serializable, to tag members to generate getters and setters
+  // and to put places tags in the code that can be replaced later on.
+
+  x3::rule<class Annotation, std::string> const annotation = "annotation";
+  auto const annotation_def = x3::lit("[[") >> *(x3::alnum | x3::space | x3::char_(",_()")) >> x3::lit("]]");
+
+  BOOST_SPIRIT_DEFINE(annotation);
+  
   // Keywords I don't particularly care about (right now) but that you're likely
   // to encounter before you hit your enum declarations
 
@@ -183,6 +192,8 @@ namespace fr::codegen::parser {
     // Signals that we've discovered a method
     // parameters are inClassConst, inClassStatic, inClassVirtual, returnType, methodName
     boost::signals2::signal<void(bool, bool, bool, const std::string&, const std::string&)> methodFound;
+    // We encountered an annotation - parameter passed in is the annotation we encountered
+    boost::signals2::signal<void(const std::string&)> annotationFound;
 
     // Some things to track keywords inside a class. These will be set/reset
     // when we run across things like "const", "static", "virtual" or "override"
@@ -321,6 +332,11 @@ namespace fr::codegen::parser {
 	resetInClassFlags();
       };
 
+      auto handleAnnotation = [&](auto& ctx){
+        annotationFound(x3::_attr(ctx));
+        x3::_attr(ctx) = "";
+      };
+
       // Some grammars I'm ignoring right now
       auto const pragmaOnceGrammar =
 	x3::lexeme[ pragmaKeyword >> x3::lit(" ") >> x3::lit("once")];
@@ -403,6 +419,7 @@ namespace fr::codegen::parser {
              -(x3::char_(';') | ignoreScopes)[handleMethodFound]);
         
       auto const classGrammar =
+        *annotation [handleAnnotation] >>
 	classKeyword >>
 	identifier [handleClassPush] >>
 	-(x3::lit(":") >> +(privateClassParentGrammar | protectedClassParentGrammar | publicClassParentGrammar >> *x3::lit(","))) >>
@@ -410,6 +427,7 @@ namespace fr::codegen::parser {
 	* (
            // For the purposes of this parser I can pretty much just ignore templates.
            // Template methods will still show up in methods
+           annotation [handleAnnotation] |
            (templateKeyword >> templateGuts) |
 	   (publicKeyword [handlePublicInClass] >> x3::lit(":")) |
 	   (protectedKeyword [handleProtectedInClass] >> x3::lit(":")) |

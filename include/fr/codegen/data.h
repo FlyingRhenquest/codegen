@@ -99,8 +99,12 @@ namespace fr::codegen {
    * * protected flag - True if protected
    * * Const flag - True if const
    * * Static flag - true if static
-   * * Ref flag - True if reference
-   * * Ptr flag - True if pointer
+   * * serializable - A tag that indicates that we want to include this member in
+   *                  serialization functions. If the class is marked serializable,
+   *                  all the members in the class will be serializable and you don't
+   *                  need to tag each member.
+   * * generateGetter - Generate a getter function for this member
+   * * generateSetter - Generate a setter function for this member
    *
    * Notes: Shared/Unique pointers will have that for their type but ptr/ref
    *        flags will not be set unless they're pointers/references to shared/unique
@@ -116,6 +120,9 @@ namespace fr::codegen {
     bool isProtected;
     bool isConst;
     bool isStatic;
+    bool serializable;
+    bool generateGetter;
+    bool generateSetter;
   };
 
   /**
@@ -126,6 +133,10 @@ namespace fr::codegen {
    * * Vector of MethodData
    * * Vector of MemberData
    * * bool isStruct - True if struct
+   * * serializable - A tag that indicates that we want to include this member in
+   *                  serialization functions. If the class is marked serializable,
+   *                  all the members 
+
    */
 
   struct ClassData {
@@ -135,6 +146,7 @@ namespace fr::codegen {
     std::vector<MethodData> methods;
     std::vector<MemberData> members;
     bool isStruct;
+    bool serializable;
 
     // Yes, this is the same function as EnumNamespace
     // and yes, I am OK with that. If I need one more
