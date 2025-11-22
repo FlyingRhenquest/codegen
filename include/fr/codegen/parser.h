@@ -123,7 +123,7 @@ namespace fr::codegen::parser {
   // Identifier
 
   x3::rule<class Identifier,std::string> const identifier = "identifier";
-  auto const identifier_def = x3::lexeme[x3::alpha >> *(x3::alnum | x3::char_('_'))];
+  auto const identifier_def = x3::lexeme[(x3::alpha | x3::char_('_')) >> *(x3::alnum | x3::char_('_'))];
 
   // Identifier with maybe namespace and maybe template stuff
   x3::rule<class EnhancedIdentifier,std::string> const enhancedIdentifier = "enhanced_identifier";
@@ -410,6 +410,19 @@ namespace fr::codegen::parser {
       // to parse out, I just don't particualrly need it for anything.
       auto const parameterGrammar = x3::char_('(') >> *(x3::char_ - x3::char_(')')) >> x3::char_(')');
 
+      auto const ignoreUsing = x3::lit("using") >> *(x3::char_ - x3::char_(';')) >> x3::char_(';');
+      
+      auto const defaultMethod = x3::char_('=') >> x3::lit("default");
+
+      auto constructorDestructor =
+        *virtualKeyword >>
+        -x3::char_('~') >>
+        identifier >>
+        parameterGrammar >>
+        *(ignoreScopes |
+          defaultMethod |
+          x3::char_(';'));
+
       auto const methodOrMember =
         *(staticKeyword [handleStaticMember] | constKeyword [handleConstMember] | virtualKeyword [handleVirtualMember] ) >>
 	enhancedIdIdGrammar >>
@@ -428,6 +441,7 @@ namespace fr::codegen::parser {
            // For the purposes of this parser I can pretty much just ignore templates.
            // Template methods will still show up in methods
            annotation [handleAnnotation] |
+           constructorDestructor |
            (templateKeyword >> templateGuts) |
 	   (publicKeyword [handlePublicInClass] >> x3::lit(":")) |
 	   (protectedKeyword [handleProtectedInClass] >> x3::lit(":")) |
@@ -447,6 +461,7 @@ namespace fr::codegen::parser {
 				     scopePop);
       
       auto const ignoreStuff =
+        ignoreUsing |
 	blockComment |
 	singleLineComment |
 	pragmaOnceGrammar |

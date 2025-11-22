@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
   // Open, read and parse each header.
   for (const auto& header : headers) {
     std::string result;
-    std::cout << "Parsing " << header << "... ";
+    std::cout << "Parsing " << header << "... " << std::endl;
     std::ifstream inputStream(header);
     std::stringstream input;
     // Create new instances of drivers for each file
@@ -80,9 +80,11 @@ int main(int argc, char *argv[]) {
     classes.regParser(parser);
     // Subscribe to enum and class driver signals
     enums.enumAvailable.connect([&enumMap](const std::string& key, const fr::codegen::EnumData& data) {
+      std::cout << "Adding enum " << key << std::endl;
       enumMap[key] = std::make_shared<fr::codegen::EnumData>(data);
     });
     classes.classAvailable.connect([&classMap](const std::string &key, const fr::codegen::ClassData& data) {
+      std::cout << "Adding class " << key << std::endl;
       classMap[key] = std::make_shared<fr::codegen::ClassData>(data);
     });      
     input << inputStream.rdbuf();

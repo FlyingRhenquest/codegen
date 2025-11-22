@@ -277,3 +277,35 @@ TEST(ParsingData,ClassAnnotation) {
   ASSERT_TRUE(data[className].members[0].generateGetter);
   ASSERT_TRUE(data[className].members[0].generateSetter);
 }
+
+// Make sure we can parse a class with a constructor/destructor
+// TODO: test colin constructor initialization syntax and
+// multiple comma separated member decls.
+TEST(ParsingData, ConstructorDestructorBasic) {
+  const std::string classCode(
+    "class MyClass {"
+    "  int _foo;"
+    "  int _bar;"
+    "public:"
+    "  using MyType = int;"
+    "  MyClass(int foo, int bar) { _foo = foo; _bar = bar }"
+    "  virtual ~MyClass() = default;"
+    "};"
+  );
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::ClassDriver driver;
+  std::string result;
+  ClassData data;
+  bool gotAClass = false;
+  driver.regParser(parser);
+
+  driver.classAvailable.connect([&data, &gotAClass](const std::string &className, const ClassData& value) {
+    gotAClass = true;
+    data = value;
+  });
+
+  parser.parse(classCode.begin(), classCode.end(), result);
+  
+  ASSERT_TRUE(gotAClass);
+  
+}
