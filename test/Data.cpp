@@ -19,6 +19,8 @@
 #include <fr/codegen/parser.h>
 #include <fr/codegen/drivers.h>
 
+using namespace fr::codegen;
+
 TEST(ParsingData, FullEnumData) {
   // Yes, this is legit -- strings separated by nothing concatinate
   const std::string enumCode(
@@ -30,15 +32,19 @@ TEST(ParsingData, FullEnumData) {
     "};}"
   );
 
-  fr::codegen::parser::ParserDriver parser;
-  fr::codegen::EnumDriver data;
   std::string result;
-  data.regParser(parser);
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::EnumDriver driver;
+  std::map<std::string, fr::codegen::EnumData> data;
+  driver.enumAvailable.connect([&data](const std::string& key, const EnumData& value) {
+    data[key] = value;
+  });
+  driver.regParser(parser);
   ASSERT_TRUE(parser.parse(enumCode.begin(), enumCode.end(), result));
-  ASSERT_EQ(data.enums.size(), 1);
+  ASSERT_EQ(data.size(), 1);
   fr::codegen::EnumData e;
   try {
-    e = data.enums.at("foo::bar::Color");
+    e = data.at("foo::bar::Color");
   } catch (std::exception &e) {
     FAIL() << "Enum foo::bar::Color not found";
   }
@@ -59,14 +65,18 @@ TEST(ParsingData, EnumClassData) {
   );
 
   fr::codegen::parser::ParserDriver parser;
-  fr::codegen::EnumDriver data;
+  fr::codegen::EnumDriver driver;
+  std::map<std::string, EnumData> data;
+  driver.enumAvailable.connect([&data](const std::string& key, const EnumData& value) {
+    data[key] = value;
+  });
   std::string result;
-  data.regParser(parser);
+  driver.regParser(parser);
   ASSERT_TRUE(parser.parse(enumCode.begin(), enumCode.end(), result));
-  ASSERT_EQ(data.enums.size(), 1);
+  ASSERT_EQ(data.size(), 1);
   fr::codegen::EnumData e;
   try {
-    e = data.enums.at("foo::bar::Color");
+    e = data.at("foo::bar::Color");
   } catch (std::exception &e) {
     FAIL() << "Enum foo::bar::Color not found";
   }
@@ -97,15 +107,19 @@ TEST(ParsingData, MultiEnum) {
   );
 
   fr::codegen::parser::ParserDriver parser;
-  fr::codegen::EnumDriver data;
+  fr::codegen::EnumDriver driver;
+  std::map<std::string, EnumData> data;
   std::string result;
-  data.regParser(parser);
+  driver.enumAvailable.connect([&data](const std::string& key, const EnumData& value) {
+    data[key] = value;
+  });
+  driver.regParser(parser);
   ASSERT_TRUE(parser.parse(enumCode.begin(), enumCode.end(), result));
-  ASSERT_EQ(data.enums.size(), 2);
+  ASSERT_EQ(data.size(), 2);
   fr::codegen::EnumData e;
 
   try {
-    e = data.enums.at("foo::bar::Color");
+    e = data.at("foo::bar::Color");
   } catch (std::exception &e) {
     FAIL() << "Enum foo::bar::Color not found";
   }
@@ -115,7 +129,7 @@ TEST(ParsingData, MultiEnum) {
   ASSERT_TRUE(e.isClassEnum);
   e.clear();
   try {
-    e = data.enums.at("fish");
+    e = data.at("fish");
   } catch (std::exception &e) {
     FAIL() << "Enum fish not found (go fish)";
   }
@@ -136,20 +150,26 @@ TEST(ParsingData,HowAboutAClass) {
     "};");
 
   fr::codegen::parser::ParserDriver parser;
-  fr::codegen::ClassDriver data;
+  fr::codegen::ClassDriver driver;
+  std::map<std::string, ClassData> data;
+  std::string className;
+  driver.classAvailable.connect([&className, &data](const std::string &key, const ClassData& value) {
+    className = key;
+    data[className] = value;
+  });
   std::string result;
-  data.regParser(parser);
+  driver.regParser(parser);
   ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
-  ASSERT_EQ(data.classes.size(), 1);
-  ASSERT_EQ(data.classes[0].name, "Wibble");
-  ASSERT_FALSE(data.classes[0].serializable);
-  ASSERT_EQ(data.classes[0].members.size(), 1);
-  ASSERT_EQ(data.classes[0].methods.size(), 1);
-  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
-  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
-  ASSERT_FALSE(data.classes[0].members[0].serializable);
-  ASSERT_FALSE(data.classes[0].members[0].generateGetter);
-  ASSERT_FALSE(data.classes[0].members[0].generateSetter);
+  ASSERT_EQ(data.size(), 1);
+  ASSERT_EQ(data[className].name, "Wibble");
+  ASSERT_FALSE(data[className].serializable);
+  ASSERT_EQ(data[className].members.size(), 1);
+  ASSERT_EQ(data[className].methods.size(), 1);
+  ASSERT_EQ(data[className].members[0].name, "wibblewobble");
+  ASSERT_EQ(data[className].methods[0].name, "wobble");
+  ASSERT_FALSE(data[className].members[0].serializable);
+  ASSERT_FALSE(data[className].members[0].generateGetter);
+  ASSERT_FALSE(data[className].members[0].generateSetter);
 }
 
 TEST(ParsingData,ClassWithInlineMethod) {
@@ -167,16 +187,22 @@ TEST(ParsingData,ClassWithInlineMethod) {
     "};");
 
   fr::codegen::parser::ParserDriver parser;
-  fr::codegen::ClassDriver data;
+  fr::codegen::ClassDriver driver;
+  std::map<std::string, ClassData> data;
+  std::string className;
+  driver.classAvailable.connect([&className, &data](const std::string& key, const ClassData& value) {
+    className = key;
+    data[className] = value;
+  });
   std::string result;
-  data.regParser(parser);
+  driver.regParser(parser);
   ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
-  ASSERT_EQ(data.classes.size(), 1);
-  ASSERT_EQ(data.classes[0].name, "Wibble");
-  ASSERT_EQ(data.classes[0].members.size(), 1);
-  ASSERT_EQ(data.classes[0].methods.size(), 1);
-  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
-  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
+  ASSERT_EQ(data.size(), 1);
+  ASSERT_EQ(data[className].name, "Wibble");
+  ASSERT_EQ(data[className].members.size(), 1);
+  ASSERT_EQ(data[className].methods.size(), 1);
+  ASSERT_EQ(data[className].members[0].name, "wibblewobble");
+  ASSERT_EQ(data[className].methods[0].name, "wobble");
 }
 
 TEST(ParsingData,ClassTemplateMethod) {
@@ -195,16 +221,22 @@ TEST(ParsingData,ClassTemplateMethod) {
     "};");
 
   fr::codegen::parser::ParserDriver parser;
-  fr::codegen::ClassDriver data;
+  fr::codegen::ClassDriver driver;
+  std::map<std::string, ClassData> data;
+  std::string className;
+  driver.classAvailable.connect([&className, &data](const std::string& key, const ClassData& value) {
+    className = key;
+    data[className] = value;
+  });
   std::string result;
-  data.regParser(parser);
+  driver.regParser(parser);
   ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
-  ASSERT_EQ(data.classes.size(), 1);
-  ASSERT_EQ(data.classes[0].name, "Wibble");
-  ASSERT_EQ(data.classes[0].members.size(), 1);
-  ASSERT_EQ(data.classes[0].methods.size(), 1);
-  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
-  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
+  ASSERT_EQ(data.size(), 1);
+  ASSERT_EQ(data[className].name, "Wibble");
+  ASSERT_EQ(data[className].members.size(), 1);
+  ASSERT_EQ(data[className].methods.size(), 1);
+  ASSERT_EQ(data[className].members[0].name, "wibblewobble");
+  ASSERT_EQ(data[className].methods[0].name, "wobble");
 }
 
 TEST(ParsingData,ClassAnnotation) {
@@ -222,18 +254,26 @@ TEST(ParsingData,ClassAnnotation) {
     "};");
 
   fr::codegen::parser::ParserDriver parser;
-  fr::codegen::ClassDriver data;
+  fr::codegen::ClassDriver driver;
   std::string result;
-  data.regParser(parser);
+  std::map<std::string, ClassData> data;
+  std::string className;
+  driver.regParser(parser);
+
+  driver.classAvailable.connect([&data, &className](const std::string& key, const ClassData& value) {
+    className = key;
+    data[className] = value;
+  });
+  
   ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
-  ASSERT_EQ(data.classes.size(), 1);
-  ASSERT_EQ(data.classes[0].name, "Wibble");
-  ASSERT_TRUE(data.classes[0].serializable);
-  ASSERT_EQ(data.classes[0].members.size(), 1);
-  ASSERT_EQ(data.classes[0].methods.size(), 1);
-  ASSERT_EQ(data.classes[0].members[0].name, "wibblewobble");
-  ASSERT_EQ(data.classes[0].methods[0].name, "wobble");
-  ASSERT_TRUE(data.classes[0].members[0].serializable);
-  ASSERT_TRUE(data.classes[0].members[0].generateGetter);
-  ASSERT_TRUE(data.classes[0].members[0].generateSetter);
+  ASSERT_EQ(data.size(), 1);
+  ASSERT_EQ(data[className].name, "Wibble");
+  ASSERT_TRUE(data[className].serializable);
+  ASSERT_EQ(data[className].members.size(), 1);
+  ASSERT_EQ(data[className].methods.size(), 1);
+  ASSERT_EQ(data[className].members[0].name, "wibblewobble");
+  ASSERT_EQ(data[className].methods[0].name, "wobble");
+  ASSERT_TRUE(data[className].members[0].serializable);
+  ASSERT_TRUE(data[className].members[0].generateGetter);
+  ASSERT_TRUE(data[className].members[0].generateSetter);
 }

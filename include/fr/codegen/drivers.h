@@ -105,14 +105,11 @@ namespace fr::codegen {
     }
     
   public:
+    boost::signals2::signal<void(const std::string&, const EnumData&)> enumAvailable;
     NamespaceDriver namespaces;
     // Temporary storage for the current working enum
     EnumData currentEnum;
     std::vector<boost::signals2::connection> subscriptions;
-
-    // Map of enums keyed by their fully qualified enum name (namespaces
-    // included.)
-    std::map<std::string, EnumData> enums;
 
     // Register with the parser
     void regParser(::fr::codegen::parser::ParserDriver &parser) {
@@ -148,7 +145,7 @@ namespace fr::codegen {
 	    namespaceKey.append("::");
 	  }
 	  namespaceKey.append(currentEnum.name);
-	  enums[namespaceKey] = currentEnum;
+          enumAvailable(namespaceKey, currentEnum);
 	  currentEnum.clear();
 	}
       });
@@ -175,7 +172,6 @@ namespace fr::codegen {
       unsubscribe();
       namespaces.clear();
       currentEnum.clear();
-      enums.clear();
     }
     
   };
@@ -212,8 +208,13 @@ namespace fr::codegen {
     }
 
   public:
+    // Expose a singal that subscribers can subscribe to
+    // Callback parameters are
+    // string - Fully qualified name of class
+    // ClassData - Copy of the class data found
+    boost::signals2::signal<void(const std::string&, const ClassData&)> classAvailable;
+    
     std::vector<boost::signals2::connection> subscriptions;
-    std::vector<ClassData> classes;
     NamespaceDriver namespaces;
     ClassData currentClass;
     bool isPublic;
@@ -256,12 +257,10 @@ namespace fr::codegen {
     }
 
     void handleClassPop() {
-      classes.push_back(currentClass);
+      classAvailable(currentClass.fullClassName(), currentClass);
       currentClass.clear();
       inClass = false;
-    };
-
-    
+    };    
 
     void handleMemberFound(bool inClassConst, bool inClassStatic, const std::string& type, const std::string& name) {
       MemberData md;
@@ -378,6 +377,7 @@ namespace fr::codegen {
       subscriptions.push_back(publicInClassSub);
       subscriptions.push_back(memberFoundSub);
       subscriptions.push_back(methodFoundSub);
+      subscriptions.push_back(annotationFoundSub);
     }
 
     void unsubscribe() {
@@ -391,7 +391,6 @@ namespace fr::codegen {
       unsubscribe();
       namespaces.clear();
       currentClass.clear();
-      classes.clear();
       nowPrivate();
       inClass = false;
       generateGetter = false;

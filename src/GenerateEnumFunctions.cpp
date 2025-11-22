@@ -36,21 +36,23 @@
 #include <fstream>
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <sstream>
 #include <string>
 #include <vector>
 
+using EnumMap = std::map<std::string, fr::codegen::EnumData>;
 
 // generateHeader takes your enum driver, header stream and the name of your enum source file so it can include it
 // and generates a header with function signatures
 
-void generateHeader(fr::codegen::EnumDriver &enums, std::ofstream& stream, const std::string& enumSource) {
+void generateHeader(EnumMap enums, std::ofstream& stream, const std::string& enumSource) {
   stream << "/* This is generated code. Do not edit. Unless you really want to. */" << std::endl;
   stream << "#pragma once" << std::endl;
   stream << "#include <string>" << std::endl;
   stream << "#include <iostream>" << std::endl;
   stream << "#include <" << enumSource << ">" << std::endl << std::endl;
-  for (auto it = enums.enums.begin(); it != enums.enums.end(); ++it) {
+  for (auto it = enums.begin(); it != enums.end(); ++it) {
     // it->first contains the fully qualified enum name
     stream << "std::string to_string(const " << it->first << "& value); // Converts enum to a string representation" << std::endl;
     stream << "std::ostream& operator<<(std::ostream& stream, const " << it->first << "& value);" << std::endl;
@@ -62,11 +64,11 @@ void generateHeader(fr::codegen::EnumDriver &enums, std::ofstream& stream, const
 
 // TODO: Generated code is kind of awful right now. De-awfulfy when I get a moment
 
-void generateSource(fr::codegen::EnumDriver &enums, std::ofstream& stream, const std::string& myHeader) {
+void generateSource(EnumMap &enums, std::ofstream& stream, const std::string& myHeader) {
   stream << "/* This is generated code. Do not edit. Unless you really want to. */" << std::endl;
   stream << "#include <" << myHeader << ">" << std::endl << std::endl;
   
-  for (auto it = enums.enums.begin(); it != enums.enums.end(); ++it) {
+  for (auto it = enums.begin(); it != enums.end(); ++it) {
     bool isClassEnum = it->second.isClassEnum;
     
     stream << "std::string to_string(const " << it->first << "& value) {" << std::endl;
@@ -145,7 +147,13 @@ int main(int argc, char* argv[]) {
   boost::program_options::notify(vm);
 
   fr::codegen::parser::ParserDriver parser;
-  fr::codegen::EnumDriver enums;
+  fr::codegen::EnumDriver driver;
+  EnumMap enums;
+
+  driver.enumAvailable.connect([&enums](const std::string key, fr::codegen::EnumData value) {
+    enums[key] = value;
+  });
+  
   std::string result;
 
   std::ifstream inputStream(inputFile);
@@ -155,7 +163,7 @@ int main(int argc, char* argv[]) {
   input << inputStream.rdbuf();
 
   // Register enum driver with parser
-  enums.regParser(parser);
+  driver.regParser(parser);
   bool parseSuccess = parser.parse(input.view().begin(), input.view().end(), result);
   if (parseSuccess) {
     generateHeader(enums, headerStream, inputFile);

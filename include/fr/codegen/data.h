@@ -16,10 +16,18 @@
 
 #pragma once
 
+#include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/archives/portable_binary.hpp>
+#include <cereal/archives/xml.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/map.hpp>
 #include <map>
 #include <string>
 #include <vector>
 #include <fr/codegen/parser.h>
+
 
 namespace fr::codegen {
 
@@ -57,7 +65,7 @@ namespace fr::codegen {
 	ret.append(*n);
       }
       return ret;
-    }
+    }    
     
     void clear() {
       namespaces.clear();
@@ -65,6 +73,25 @@ namespace fr::codegen {
       name.clear();
       isClassEnum = false;
     }
+
+    // Cereal serialziation functions
+    
+    template <typename Archive>
+    void save(Archive &ar) const {
+      ar(cereal::make_nvp("namespaces", namespaces));
+      ar(cereal::make_nvp("name", name));
+      ar(cereal::make_nvp("isClassEnum", isClassEnum));
+      ar(cereal::make_nvp("identifiers", identifiers));
+    }
+
+    template <typename Archive>
+    void load(Archive& ar) {
+      ar(namespaces);
+      ar(name);
+      ar(isClassEnum);
+      ar(identifiers);
+    }
+    
   };
 
   /**
@@ -89,6 +116,31 @@ namespace fr::codegen {
     bool isVirtual;
     bool isConst;
     bool isStatic;
+
+    // Cereal serialization functions
+    
+    template <typename Archive>
+    void save(Archive &ar) const {
+      ar(cereal::make_nvp("returnType", returnType));
+      ar(cereal::make_nvp("name", name));
+      ar(cereal::make_nvp("isPublic", isPublic));
+      ar(cereal::make_nvp("isProtected", isProtected));
+      ar(cereal::make_nvp("isVirtual", isVirtual));
+      ar(cereal::make_nvp("isConst", isConst));
+      ar(cereal::make_nvp("isStatic", isStatic));
+    }
+
+    template <typename Archive>
+    void load(Archive &ar) {
+      ar(returnType);
+      ar(name);
+      ar(isPublic);
+      ar(isProtected);
+      ar(isVirtual);
+      ar(isConst);
+      ar(isStatic);
+    }
+    
   };
 
   /**
@@ -123,6 +175,32 @@ namespace fr::codegen {
     bool serializable;
     bool generateGetter;
     bool generateSetter;
+
+    template <typename Archive>
+    void save(Archive& ar) const {
+      ar(cereal::make_nvp("type", type));
+      ar(cereal::make_nvp("name", name));
+      ar(cereal::make_nvp("isPublic", isPublic));
+      ar(cereal::make_nvp("isProtected", isProtected));
+      ar(cereal::make_nvp("isConst", isConst));
+      ar(cereal::make_nvp("isStatic", isStatic));
+      ar(cereal::make_nvp("serializable", serializable));
+      ar(cereal::make_nvp("generateGetter", generateGetter));
+      ar(cereal::make_nvp("generateSetter", generateSetter));
+    }
+
+    template <typename Archive>
+    void load(Archive* ar) {
+      ar(type);
+      ar(name);
+      ar(isPublic);
+      ar(isProtected);
+      ar(isConst);
+      ar(isStatic);
+      ar(serializable);
+      ar(generateGetter);
+      ar(generateSetter);
+    }
   };
 
   /**
@@ -135,11 +213,11 @@ namespace fr::codegen {
    * * bool isStruct - True if struct
    * * serializable - A tag that indicates that we want to include this member in
    *                  serialization functions. If the class is marked serializable,
-   *                  all the members 
-
+   *                  all the members will be serialized without needing to tag each
+   *                  individual one.
    */
 
-  struct ClassData {
+  struct ClassData {    
     std::vector<std::string> namespaces;
     std::string name;
     std::vector<std::string> parents;
@@ -147,6 +225,16 @@ namespace fr::codegen {
     std::vector<MemberData> members;
     bool isStruct;
     bool serializable;
+
+    std::string fullClassName() {
+      std::string ret;
+      for (auto& ns : namespaces) {
+        ret.append(ns);
+        ret.append("::");
+      }
+      ret.append(name);
+      return ret;
+    }
 
     // Yes, this is the same function as EnumNamespace
     // and yes, I am OK with that. If I need one more
@@ -169,6 +257,28 @@ namespace fr::codegen {
       methods.clear();
       members.clear();
       isStruct = false;
+    }
+
+    template <typename Archive>
+    void save(Archive &ar) const {
+      ar(cereal::make_nvp("namespaces", namespaces));
+      ar(cereal::make_nvp("name", name));
+      ar(cereal::make_nvp("parents", parents));
+      ar(cereal::make_nvp("methods", methods));
+      ar(cereal::make_nvp("members", members));
+      ar(cereal::make_nvp("isStruct", isStruct));
+      ar(cereal::make_nvp("serializable", serializable));
+    }
+
+    template <typename Archive>
+    void load(Archive *ar) {
+      ar(namespaces);
+      ar(name);
+      ar(parents);
+      ar(methods);
+      ar(members);
+      ar(isStruct);
+      ar(serializable);
     }
   };
 

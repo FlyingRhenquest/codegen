@@ -41,11 +41,21 @@ add_executable(GenerateEnumFunctions
   "${CMAKE_CURRENT_SOURCE_DIR}/src/GenerateEnumFunctions.cpp"
 )
 
+add_executable(IndexCode
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/IndexCode.cpp"
+)
+
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
   target_compile_definitions(GenerateEnumFunctions PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
+  target_compile_definitions(IndexCode PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
 endif()
 
 target_link_libraries(GenerateEnumFunctions PUBLIC
+  FR::codegen
+  Boost::program_options
+)
+
+target_link_libraries(IndexCode PUBLIC
   FR::codegen
   Boost::program_options
 )
@@ -75,7 +85,7 @@ install(TARGETS frcodegen
   DESTINATION include/fr/codegen
 )
 
-install(TARGETS GenerateEnumFunctions
+install(TARGETS GenerateEnumFunctions IndexCode
   DESTINATION bin
 )
 
