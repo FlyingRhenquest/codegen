@@ -1,9 +1,10 @@
 # Codegen
 
-This is a little demo project that parses enum data from a C++ file and
-uses the information to generate to_string functions and ostream operators
-from the enum information. A *very* basic example demonstrates this in 
-action.
+This is a little demo project that parses a small subset of C++ to extract
+data from enums and classes. Two executables are currently provided to
+demonstrate this, "GenerateEnumFunctions" generates ostream operators
+for enums, and "IndexCode" reads header files and outputs a JSON file
+with the information collected about enums and classes for future use.
 
 This is not indended to be a production-ready project. Rather, it
 demonstrates how to use boost::spirit::x3 for a somewhat complex
@@ -12,12 +13,11 @@ claim to conform 100% to the C++ standard for even the limited amount
 of stuff that it does. It is a good jumping off point to push further
 into C++ parsing and I do intend to add some more features to it.
 
-If you actually want to use this code to generate operators for
-your enums, it would be best to put your enums in a separate header
-that you can run the GenerateEnumFunctions against. That will give the
-program the best chance to succeed. If you're doing anything with
-your enums that is weird enough to make the parser fail, please file an
-issue in the github project and I'll try to adjust the code to handle it.
+If you want to use this project to generate code, it would be a good
+idea to put the classes you want it to read in a header file
+and keep them as simple as possible. If you look in the the
+"Data.cpp" file in the test directory, that's what I'm testing
+on right now. Your mileage may vary.
 
 This project is licensed under Apache 2.0. If you do something interesting
 with it, I'd love to hear about it!
@@ -25,8 +25,8 @@ with it, I'd love to hear about it!
 # Limitations
 
 This code won't generate code for anonymous enums, enums embedded in
-enums or enums embedded in classes. It hasn't been tested with anything
-more complex than the enums.h file in the examples/enum_examples directory.
+enums or enums embedded in classes. You can look in the tests directory
+for a good idea of what it can handle at this time.
 
 # Building
 
@@ -135,11 +135,3 @@ a queryable API would be a lot nicer for future expansions of this project.
 
 I want to add a python API to the data objects and ParserDriver. Maybe even
 include a python API call to the code generator.
-
-I'd like to extend this to read simple C++ classes and structs. Nothing
-templated, lol. At the very least, adding a cereal serialize function generator
-for plain old data structs would be almost trivial at this point.
-It would be only slighty more difficult to add a serialize function
-generator for more complex classes right up until templates become involved.
-A lot of template cases don't make sense to serialize anyway, so this
-should still be fairly useful.
