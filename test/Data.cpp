@@ -283,13 +283,19 @@ TEST(ParsingData,ClassAnnotation) {
 // multiple comma separated member decls.
 TEST(ParsingData, ConstructorDestructorBasic) {
   const std::string classCode(
-    "class MyClass {"
-    "  int _foo;"
+    "/* Comment */"
+    "#pragma once"
+    "#include <pleh/pleh/pleh.h>"
+    "struct MyClass : public shabizzle<MyClass> {"
+    "  int _foo = 2;"
     "  int _bar;"
+    "  foo::bar::baz bizzle;"
     "public:"
     "  using MyType = int;"
+    "  MyClass() = default;"
     "  MyClass(int foo, int bar) { _foo = foo; _bar = bar }"
     "  virtual ~MyClass() = default;"
+    "  void sayHello(const std::string& h) const { std::print(\"{}\",h);}"
     "};"
   );
   fr::codegen::parser::ParserDriver parser;
@@ -306,6 +312,5 @@ TEST(ParsingData, ConstructorDestructorBasic) {
 
   parser.parse(classCode.begin(), classCode.end(), result);
   
-  ASSERT_TRUE(gotAClass);
-  
+  ASSERT_TRUE(gotAClass);  
 }

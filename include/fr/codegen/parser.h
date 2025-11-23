@@ -98,9 +98,6 @@ namespace fr::codegen::parser {
   x3::rule<class IncludeKeyword> const includeKeyword = "include_keyword";
   auto const includeKeyword_def = x3::lit("#include");
 
-  x3::rule<class IncludePath> const includePath = "include_path";
-  auto const includePath_def = +(x3::lit("/") | x3::lit(".") | x3::alnum);
-
   // Template guts -- ignore everything from < to >
   // We do have to pay attention to < level in the template, which
   // will basically be identified as "more template guts."
@@ -118,7 +115,7 @@ namespace fr::codegen::parser {
                *((x3::char_ - x3::char_("{}")) >> *ignoreScopes) >>
                x3::char_("}")];
   
-  BOOST_SPIRIT_DEFINE(pragmaKeyword, includeKeyword, includePath, templateGuts, ignoreScopes);
+  BOOST_SPIRIT_DEFINE(pragmaKeyword, includeKeyword, templateGuts, ignoreScopes);
   
   // Identifier
 
@@ -127,7 +124,7 @@ namespace fr::codegen::parser {
 
   // Identifier with maybe namespace and maybe template stuff
   x3::rule<class EnhancedIdentifier,std::string> const enhancedIdentifier = "enhanced_identifier";
-  auto const enhancedIdentifier_def = x3::lexeme[x3::alpha >> *(x3::alnum | x3::char_("<>:&*"))];
+  auto const enhancedIdentifier_def = x3::lexeme[(x3::alpha | x3::char_('_')) >> *(x3::alnum | x3::char_("_<>:&*"))];
 
   BOOST_SPIRIT_DEFINE(identifier, enhancedIdentifier);
   
@@ -339,14 +336,13 @@ namespace fr::codegen::parser {
 
       // Some grammars I'm ignoring right now
       auto const pragmaOnceGrammar =
-	x3::lexeme[ pragmaKeyword >> x3::lit(" ") >> x3::lit("once")];
+	pragmaKeyword >> x3::lit("once");
 
       auto const includeGrammar =
-	x3::lexeme[includeKeyword >>
-		   x3::lit(" ") >>
-		   (x3::lit("<") | x3::lit("\"")) >>
-	  includePath >>
-		   (x3::lit(">") | x3::lit("\""))];
+	includeKeyword >>
+           x3::char_("<\"") >>
+           *(x3::char_ - x3::char_(">\"")) >>
+          x3::char_(">\"");
 	  
       // Wire up grammars to signal events
       auto const namespaceGrammar =
@@ -392,15 +388,15 @@ namespace fr::codegen::parser {
 
       auto const privateClassParentGrammar =
 	-privateKeyword >>
-	identifier [handlePrivateClassParent];
+	enhancedIdentifier [handlePrivateClassParent];
 
       auto const protectedClassParentGrammar =
 	protectedKeyword >>
-	identifier [handleProtectedClassParent];
+	enhancedIdentifier [handleProtectedClassParent];
 
       auto const publicClassParentGrammar =
 	publicKeyword >>
-	identifier [handlePublicClassParent];
+	enhancedIdentifier [handlePublicClassParent];
 
       auto const enhancedIdIdGrammar =
 	enhancedIdentifier [handleInClassEnhancedIdentifier] >>
@@ -425,15 +421,16 @@ namespace fr::codegen::parser {
 
       auto const methodOrMember =
         *(staticKeyword [handleStaticMember] | constKeyword [handleConstMember] | virtualKeyword [handleVirtualMember] ) >>
-	enhancedIdIdGrammar >>
+	enhancedIdIdGrammar >> *(x3::char_('=') >> *(x3::char_ - x3::char_(';'))) >>
         -x3::char_(';') [handleMemberFound] | (
              parameterGrammar  >>
-             -overrideKeyword [handleVirtualMember] >>            
+             *(overrideKeyword [handleVirtualMember] |
+               constKeyword [handleConstMember]) >>
              -(x3::char_(';') | ignoreScopes)[handleMethodFound]);
         
       auto const classGrammar =
         *annotation [handleAnnotation] >>
-	classKeyword >>
+        (classKeyword | structKeyword) >>
 	identifier [handleClassPush] >>
 	-(x3::lit(":") >> +(privateClassParentGrammar | protectedClassParentGrammar | publicClassParentGrammar >> *x3::lit(","))) >>
 	x3::lit("{") >>
@@ -452,6 +449,9 @@ namespace fr::codegen::parser {
 	
 		
       auto const programGrammar = * (
+                                     includeGrammar |
+                                     pragmaOnceGrammar |
+                                     ignoreUsing |
 				     scopePush |
 				     namespaceGrammar |
 				     enumGrammar |
@@ -461,11 +461,8 @@ namespace fr::codegen::parser {
 				     scopePop);
       
       auto const ignoreStuff =
-        ignoreUsing |
 	blockComment |
 	singleLineComment |
-	pragmaOnceGrammar |
-	includeGrammar |
 	x3::ascii::space;
 
       // Parse all the things      
