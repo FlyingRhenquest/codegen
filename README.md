@@ -45,11 +45,11 @@ The example should be built separately once the GenerateEnumFunctions
 program has been installed in your path:
 
 ```
- mkdir /tmp/build\_examples
- cd /tmp/build\_examples
- cmake ~/sandbox/codegen/examples/enum\_example
+ mkdir /tmp/build_examples
+ cd /tmp/build_examples
+ cmake ~/sandbox/codegen/examples/enum_example
  make
- ./enum\_example
+ ./enum_example
 ```
 
 If you modify the parser and rebuild GenerateEnumFunctions, you'll need
