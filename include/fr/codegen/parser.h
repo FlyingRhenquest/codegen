@@ -197,6 +197,7 @@ namespace fr::codegen::parser {
     bool inClassConst;
     bool inClassStatic;
     bool inClassVirtual;
+    bool inClassStruct;
 
     // Store the name of a member or method type
     std::string inClassEnhancedIdentifier;
@@ -207,6 +208,7 @@ namespace fr::codegen::parser {
       inClassConst = false;
       inClassStatic = false;
       inClassVirtual = false;
+      inClassStruct;
       inClassEnhancedIdentifier = "";
       inClassIdentifier = "";
     }
@@ -262,7 +264,11 @@ namespace fr::codegen::parser {
       };
 
       auto handleClassPush = [&](auto& ctx) {
-	classPush(x3::_attr(ctx), scopeDepth);
+        if (!inClassStruct) {
+          classPush(x3::_attr(ctx), scopeDepth);
+        } else {
+          structPush(x3::_attr(ctx), scopeDepth);
+        }
 	x3::_attr(ctx) = "";
       };
 
@@ -327,6 +333,10 @@ namespace fr::codegen::parser {
       auto handleMethodFound = [&](){
 	methodFound(inClassConst, inClassStatic, inClassVirtual, inClassEnhancedIdentifier, inClassIdentifier);
 	resetInClassFlags();
+      };
+
+      auto handleStructKeyword = [&](){
+        inClassStruct = true;
       };
 
       auto handleAnnotation = [&](auto& ctx){
@@ -430,7 +440,7 @@ namespace fr::codegen::parser {
         
       auto const classGrammar =
         *annotation [handleAnnotation] >>
-        (classKeyword | structKeyword) >>
+        (classKeyword | structKeyword [handleStructKeyword]) >>
 	identifier [handleClassPush] >>
 	-(x3::lit(":") >> +(privateClassParentGrammar | protectedClassParentGrammar | publicClassParentGrammar >> *x3::lit(","))) >>
 	x3::lit("{") >>
