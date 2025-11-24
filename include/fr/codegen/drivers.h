@@ -109,8 +109,14 @@ namespace fr::codegen {
     NamespaceDriver namespaces;
     // Temporary storage for the current working enum
     EnumData currentEnum;
+    // File we're currently reading (Must be set by caller)
+    std::string currentFile;
     std::vector<boost::signals2::connection> subscriptions;
 
+    void setCurrentFile(const std::string& filename) {
+      currentFile = filename;
+    }
+    
     // Register with the parser
     void regParser(::fr::codegen::parser::ParserDriver &parser) {
       // Reset the current enum to default values
@@ -145,7 +151,8 @@ namespace fr::codegen {
 	    namespaceKey.append("::");
 	  }
 	  namespaceKey.append(currentEnum.name);
-          enumAvailable(namespaceKey, currentEnum);
+          currentEnum.definedIn = currentFile;
+          enumAvailable(namespaceKey, currentEnum);          
 	  currentEnum.clear();
 	}
       });
@@ -227,6 +234,12 @@ namespace fr::codegen {
     bool generateSetter;
     // Method-specific serialization flag
     bool serializable;
+    // Current filename we're parsing (Must be set externally)
+    std::string currentFile;
+
+    void setCurrentFile(const std::string& filename) {
+      currentFile = filename;
+    }
 
     void handleClass(const std::string&name, int scopeDepth) {
       copyNamespaces();
@@ -257,6 +270,7 @@ namespace fr::codegen {
     }
 
     void handleClassPop() {
+      currentClass.definedIn = currentFile;
       classAvailable(currentClass.fullClassName(), currentClass);
       currentClass.clear();
       inClass = false;

@@ -51,9 +51,11 @@ namespace fr::codegen {
     // Enum name
     std::string name;
     // Tracks if this is a class enum or an old timey one
-    bool isClassEnum;
+    bool isClassEnum;    
+    // Filename this enum is defined in (Must be set in EnumDriver)
+    std::string definedIn;
     // identifiers in the enum
-    std::vector<std::string> identifiers;
+    std::vector<std::string> identifiers;    
 
     // Returns the C++ formatted namespace for this enum
     std::string enumNamespace() {
@@ -81,6 +83,7 @@ namespace fr::codegen {
       ar(cereal::make_nvp("namespaces", namespaces));
       ar(cereal::make_nvp("name", name));
       ar(cereal::make_nvp("isClassEnum", isClassEnum));
+      ar(cereal::make_nvp("definedIn", definedIn));
       ar(cereal::make_nvp("identifiers", identifiers));
     }
 
@@ -89,6 +92,7 @@ namespace fr::codegen {
       ar(namespaces);
       ar(name);
       ar(isClassEnum);
+      ar(definedIn);
       ar(identifiers);
     }
     
@@ -217,7 +221,9 @@ namespace fr::codegen {
    *                  individual one.
    */
 
-  struct ClassData {    
+  struct ClassData {
+    // Filename class is defined in
+    std::string definedIn;
     std::vector<std::string> namespaces;
     std::string name;
     std::vector<std::string> parents;
@@ -261,6 +267,7 @@ namespace fr::codegen {
 
     template <typename Archive>
     void save(Archive &ar) const {
+      ar(cereal::make_nvp("definedIn", definedIn));
       ar(cereal::make_nvp("namespaces", namespaces));
       ar(cereal::make_nvp("name", name));
       ar(cereal::make_nvp("parents", parents));
@@ -272,6 +279,7 @@ namespace fr::codegen {
 
     template <typename Archive>
     void load(Archive *ar) {
+      ar(definedIn);
       ar(namespaces);
       ar(name);
       ar(parents);

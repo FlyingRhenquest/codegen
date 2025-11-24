@@ -78,6 +78,9 @@ int main(int argc, char *argv[]) {
     // Register enum and class drivers with parser
     enums.regParser(parser);
     classes.regParser(parser);
+    // Set filename we're looking at
+    enums.setCurrentFile(header);
+    classes.setCurrentFile(header);
     // Subscribe to enum and class driver signals
     enums.enumAvailable.connect([&enumMap](const std::string& key, const fr::codegen::EnumData& data) {
       std::cout << "Adding enum " << key << std::endl;

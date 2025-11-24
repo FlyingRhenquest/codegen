@@ -45,9 +45,14 @@ add_executable(IndexCode
   "${CMAKE_CURRENT_SOURCE_DIR}/src/IndexCode.cpp"
 )
 
+add_executable(OstreamOpsFromIndex
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/OstreamOpsFromIndex.cpp"
+)
+
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
   target_compile_definitions(GenerateEnumFunctions PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
   target_compile_definitions(IndexCode PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
+  target_compile_definitions(OstreamOpsFromIndex PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
 endif()
 
 target_link_libraries(GenerateEnumFunctions PUBLIC
@@ -60,9 +65,14 @@ target_link_libraries(IndexCode PUBLIC
   Boost::program_options
 )
 
+target_link_libraries(OstreamOpsFromIndex PUBLIC
+  FR::codegen
+  Boost::program_options
+)
+
 # Install Instrumentation
 set(frcodegen_VERSION_MAJOR 0)
-set(frcodegen_VERSION_MINOR 0)
+set(frcodegen_VERSION_MINOR 1)
 set(frcodegen_VERSION ${frcodegen_VERSION_MAJOR}.${frcodegen_VERSION_MINOR})
 
 include(GNUInstallDirs)
@@ -80,13 +90,12 @@ configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
 )
 
 # Install Interface Library
-install(TARGETS frcodegen
+install(TARGETS frcodegen GenerateEnumFunctions IndexCode OstreamOpsFromIndex
   EXPORT frcodegen_export
-  DESTINATION include/fr/codegen
-)
-
-install(TARGETS GenerateEnumFunctions IndexCode
-  DESTINATION bin
+  PUBLIC_HEADER DESTINATION include/fr/codegen
+  INCLUDES DESTINATION include/fr/codegen
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
 )
 
 install(EXPORT frcodegen_export
@@ -98,5 +107,6 @@ install(EXPORT frcodegen_export
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/FRcodegenConfigVersion.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/FRcodegenConfig.cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/CodegenFunctions.cmake"
   DESTINATION lib/cmake/FRcodegen
 )

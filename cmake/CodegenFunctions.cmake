@@ -1,0 +1,110 @@
+# Instrumentation Functions for CMake
+
+#-----------------------------------------------------------------
+# codegen_index_objects reads a set of C++ Headers and creates a
+# JSON index of the structs, classes and enums that it finds.
+#
+# Arguments:
+# HEADERS keyword followed by a list of headers
+# INDEX Followed by the JSON file to write to
+#
+# INDEX is optional and will default to
+# "${CMAKE_CURRENT_BINARY_DIR}/index.json"
+#
+# example:
+# codegen_index_objects(INDEX classes.json HEADERS ${HEADER_LIST})
+#-----------------------------------------------------------------
+
+function(codegen_index_objects)
+
+  # Parse Arguments
+  
+  set(INDEX_FILE "${CMAKE_CURRENT_BINARY_DIR}/index.json")
+  set(HEADER_LIST "")
+  set(options "")
+  set(oneValueArgs "INDEX")
+  set(multiValueArgs "HEADERS")
+  cmake_parse_arguments(PARSE_ARGV 0 arg
+    "${options}" "${oneValueArgs}" "${multiValueArgs}"
+  )
+
+  # Process Arguments
+  
+  if (arg_INDEX)
+    set(INDEX_FILE "${arg_INDEX}")
+  endif()
+  if (arg_HEADERS)
+    set(HEADER_LIST "${arg_HEADERS}")
+  else()
+    message(FATAL_ERROR "No headers were provided to codegen_index_object")
+  endif()
+
+  # Generate Command Line
+  find_program(INDEX_CODE IndexCode)
+  set(COMMAND_LINE "${INDEX_CODE}")
+  list(APPEND COMMAND_LINE "-o" "${INDEX_FILE}")
+  foreach (HEADER_FILE IN LISTS HEADER_LIST)
+    list(APPEND COMMAND_LINE "-h" "${HEADER_FILE}")
+  endforeach()
+  message(STATUS "Command line: ${COMMAND_LINE}")
+  execute_process(
+    COMMAND ${COMMAND_LINE}
+  )
+  
+endfunction()
+
+#--------------------------------------------------------------------
+# codegen_ostream_operators geneates to_string functions and ostream
+# operators found in a json index created by codegen_index_objects.
+#
+# Arguments:
+# INDEX - Index to read (Will default to same index as
+#         codegen_index_objects)
+# HEADER - Header to generate (Defaults to
+#         ${CMAKE_CURRENT_BINARY_DIR}/ops.h
+# SOURCE - cpp file to generate (Defaults to
+#         ${CMAKE_CURRENT_BINARY_DIR}/ops.cpp
+# TARGET - Target to add CPP file to
+# -------------------------------------------------------------------
+
+function(codegen_ostream_operators)
+  # defaults
+  set(INDEX_FILE "${CMAKE_CURRENT_BINARY_DIR}/index.json")
+  set(HEADER "${CMAKE_CURRENT_BINARY_DIR}/ops.h")
+  set(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/ops.cpp")
+  set(options "")
+  set(oneValueArgs INDEX HEADER SOURCE TARGET)
+  set(multiValueArgs "")
+  # Parse args
+  cmake_parse_arguments(PARSE_ARGV 0 arg
+    "${options}" "${oneValueArgs}" "${multiValueArgs}"
+  )
+
+  if (arg_INDEX)
+    set(INDEX_FILE "${arg_INDEX}")
+  endif()
+  if (arg_HEADER)
+    set(HEADER "${arg_HEADER}")
+  endif()
+  if (arg_SOURCE)
+    set(SOURCE "${arg_SOURCE}")
+  endif()
+  if(arg_TARGET)
+    set(TARGET ${arg_TARGET})
+  endif()
+
+  # generate command line
+  find_program(OPS_GEN OstreamOpsFromIndex)
+  set(COMMAND_LINE "${OPS_GEN}")
+  list(APPEND COMMAND_LINE "-i" "${INDEX_FILE}")
+  list(APPEND COMMAND_LINE "-h" "${HEADER}")
+  list(APPEND COMMAND_LINE "-c" "${SOURCE}")
+  message(STATUS "Command line: ${COMMAND_LINE}")
+  execute_process(
+    COMMAND ${COMMAND_LINE}
+  )
+  if (TARGET)
+    target_sources(${TARGET} PRIVATE "${SOURCE}")
+  endif()
+  
+endfunction()

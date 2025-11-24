@@ -12,23 +12,33 @@ if (NOT TARGET FR::codegen)
   find_package(FRcodegen CONFIG REQUIRED)
 endif()
 
-find_program(generate_code NAMES GenerateEnumFunctions)
+set(CODE_INDEX "${CMAKE_CURRENT_BINARY_DIR}/index.json")
 
-if (NOT generate_code)
-  message(FATAL_ERROR "Could not find GenerateEnumFunctions. Please insure it's built and found somehwere I can find it")
-endif()
-
-execute_process(
-  COMMAND
-  ${generate_code} -i ${CMAKE_CURRENT_SOURCE_DIR}/enums.h -h ${CMAKE_CURRENT_BINARY_DIR}/enumsOstreamOperators.h -c ${CMAKE_CURRENT_BINARY_DIR}/enumOstreamOperators.cpp
-  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
-  COMMENT "Generating ostream operators"
+set(EXAMPLE_HEADERS
+  "${CMAKE_CURRENT_SOURCE_DIR}/enums.h"
 )
 
-set(EXAMPLE_SRC
-  "${CMAKE_CURRENT_SOURCE_DIR}/enums.cpp"
-  "${CMAKE_CURRENT_BINARY_DIR}/enumOstreamOperators.cpp"
+add_executable(example
+  ${CMAKE_CURRENT_SOURCE_DIR}/enums.cpp
 )
 
-add_executable(enum_example ${EXAMPLE_SRC})
-target_include_directories(enum_example PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
+# Read enums.h and generate an index file
+codegen_index_objects(INDEX "${CMAKE_CURRENT_BINARY_DIR}/index.json"
+  HEADERS "${EXAMPLE_HEADERS}"
+)
+
+# This generates ostream operators for any enums that were found.
+# I can just cruise on defaults for everything but target
+# This generates ops.cpp and ops.h in the CMAKE_CURRENT_BINARY_DIR
+# The function accepts parameters to put them elsewhere if you want to.
+#
+# I could see potentially running the OstreamOpsFromIndex as a on-off
+# and including the generated code with your project too, in which
+# case you can edit it if you really want to (the includes for headers
+# in the generated source are currently a bit crap, but they work.)
+
+codegen_ostream_operators(TARGET example
+)
+
+# I need to point the compiler at the binary dir to pick up ops.h
+target_include_directories(example PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
