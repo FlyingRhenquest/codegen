@@ -449,6 +449,7 @@ namespace fr::codegen::parser {
            // Template methods will still show up in methods
            annotation [handleAnnotation] |
            constructorDestructor |
+           ignoreUsing |
            (templateKeyword >> templateGuts) |
 	   (publicKeyword [handlePublicInClass] >> x3::lit(":")) |
 	   (protectedKeyword [handleProtectedInClass] >> x3::lit(":")) |
