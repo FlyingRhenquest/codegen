@@ -48,8 +48,8 @@ DataObjects.h, which is included in ExerciseDataObjects.cpp.
 # CMake Instrumentation
 
 When you install this package, the CMake instrumentation in 
-cmake/CodegenFunctions.cmake. This currently includes two cmake
-functions:
+cmake/CodegenFunctions.cmake. This currently includes the
+following cmake functions:
 
 codegen\_index\_objects runs IndexCode on the specified objects
 and generates a JSON index file.
