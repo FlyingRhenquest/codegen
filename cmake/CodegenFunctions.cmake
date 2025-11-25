@@ -108,3 +108,64 @@ function(codegen_ostream_operators)
   endif()
   
 endfunction()
+
+#--------------------------------------------------------------------
+# codegen_generate_methods generates getters, setters and cereal
+# archive functions based on annotations in the source code. You
+# can annotate class declarations with [[cereal]] prior to the
+# "class" keyword to set all members in the class to be archived,
+# or put [[cereal]] before each member you want to be serialized.
+# You can also put [[get]] and [[set]] prior to each member you
+# want to generate a getter or setter for. Any combination of these
+# keywwords can be placed in one annotation and separated by
+# commas like so: [[cereal,get,set]].
+#
+# This function requires an index of the code generated with
+# IndexCode. It's designed to do line-by-line reading and
+# writing from the source class, so it's a good idea to put
+# your source file in a .h.in file and rewrite it to a .h file.
+#
+# Arguments:
+# INDEX - Index json to read (will default to the same one
+#         as codegen_index_objects)
+# SOURCE - Source file to read
+# DESTINATION - Destination file to write
+#------------------------------------------------------------------
+function(codegen_generate_methods)
+  # defaults
+  set(INDEX_FILE "${CMAKE_CURRENT_BINARY_DIR}/index.json")
+  set(SOURCE_FILE "")
+  set(DESTINATION_FILE "")
+  # Set up options
+  set(oneValueArgs INDEX SOURCE DESTINATION)
+  set(multiValueArgs "")
+  # Parse Args
+  cmake_parse_arguments(PARSE_ARGV 0 arg
+    "${options}" "${oneValueArgs}" "${multiValueArgs}"
+  )
+
+  if (arg_INDEX)
+    set(INDEX_FILE "${arg_INDEX}")
+  endif()
+  
+  if (arg_SOURCE)
+    set(SOURCE_FILE "${arg_SOURCE}")
+  else()
+    message(FATAL_ERROR "You must specify a source file for codegen_generate_methods")
+  endif()
+
+  if (arg_DESTINATION)
+    set(DESTINATION_FILE "${arg_DESTINATION}")
+  else()
+    message(FATAL_ERROR "You must specify a destiatnion file for codegen_generate_methods")
+  endif()
+
+  # Generate Command Line
+  find_program(OPS_GEN "GenerateFunctions")
+  set(COMMAND_LINE "${OPS_GEN}")
+  list(APPEND COMMAND_LINE "-i" "${INDEX_FILE}")
+  list(APPEND COMMAND_LINE "-h" "${SOURCE_FILE}")
+  list(APPEND COMMAND_LINE "-o" "${DESTINATION_FILE}")
+  message(STATUS "codegen_generate_methods: Command Line: ${COMMAND_LINE}")
+  execute_process(COMMAND ${COMMAND_LINE})
+endfunction()

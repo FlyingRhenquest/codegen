@@ -1,0 +1,118 @@
+/**
+ * Copyright 2025 Bruce Ide
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+#pragma once
+#include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/archives/portable_binary.hpp>
+#include <cereal/archives/xml.hpp>
+#include <string>
+#include <iostream>
+
+namespace fr::codegen {
+
+  // Here we have an example data object with some private data.
+  // Individual members are tagged with all the things
+
+  class IndividualSerializableAddress {
+
+    [[cereal,get,set]] std::string _name;
+    [[cereal,get,set]] std::string _address1;
+    [[cereal,get,set]] std::string _address2;
+    [[cereal,get,set]] std::string _city;
+    [[cereal,get,set]] std::string _state;
+    [[cereal,get,set]] std::string _zip;
+
+  public:
+
+    IndividualSerializableAddress() = default;
+    virtual ~IndividualSerializableAddress() = default;
+
+    // Put genGetSetMethods in an annotation on a line by itself.
+    // The preprocesor will look for and replace this line with
+    // getter/setter functions.
+    
+    [[genGetSetMethods]]
+
+    // Use cerealGenLoadSave the same way, on a line by itself.
+    // This will generate load and save methods for methods
+    // tagged with cereal. You can tag the whole class with
+    // the cereal tag as well, which will cause all data
+    // members to be serialized without having to tag them
+    // individually
+
+    [[genCerealLoadSave]]
+    
+  };
+
+  // A struct tagged with serializable
+  
+  [[cereal]] struct AnimalSays {
+    std::string animal;
+    std::string says;
+
+    // This should not generate any methods
+    [[genGetSetMethods]]
+    // This should
+    [[genCerealLoadSave]]
+  };
+
+  // No serialization, some members only have getters
+  // some only have setters, some don't have any
+  class WeirdClass {
+    std::string _name;
+    [[set]] std::string _firstName;
+    [[set]] std::string _lastName;
+    [[get]] std::string _ownsAnimals;
+    [[get]][[set]] std::string _eieio;
+  
+  public:
+    WeirdClass(const std::string& owns) {
+      // Parser doesn't handle : 
+      _ownsAnimals = owns;
+    }
+    ~WeirdClass() = default;
+
+    // Hand Rolled set name
+    void setName() {
+      if (_firstName.length() && _lastName.length()) {
+        _name = _firstName;
+        _name.append(" ");
+        _name.append(_lastName);
+      }
+    }
+
+    std::string to_string() {
+      std::string ret("class: WeirdClass");
+      ret.append("\n");
+      ret.append("Name: ");
+      ret.append(_name);
+      ret.append("\n");
+      ret.append("Owns: ");
+      ret.append(_ownsAnimals);
+      ret.append("\n");
+      ret.append("Says: ");
+      ret.append(_eieio);
+      return ret;
+    }
+
+    [[genGetSetMethods]]
+    // This should not generate any methods
+    [[ genCerealLoadSave]]
+    
+  };
+  
+}

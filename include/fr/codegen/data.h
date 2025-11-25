@@ -194,7 +194,7 @@ namespace fr::codegen {
     }
 
     template <typename Archive>
-    void load(Archive* ar) {
+    void load(Archive& ar) {
       ar(type);
       ar(name);
       ar(isPublic);
@@ -232,6 +232,8 @@ namespace fr::codegen {
     bool isStruct;
     bool serializable;
 
+    ClassData() : isStruct(false), serializable(false) {}
+
     std::string fullClassName() {
       std::string ret;
       for (auto& ns : namespaces) {
@@ -263,6 +265,7 @@ namespace fr::codegen {
       methods.clear();
       members.clear();
       isStruct = false;
+      serializable = false;
     }
 
     template <typename Archive>
@@ -278,7 +281,7 @@ namespace fr::codegen {
     }
 
     template <typename Archive>
-    void load(Archive *ar) {
+    void load(Archive &ar) {
       ar(definedIn);
       ar(namespaces);
       ar(name);
