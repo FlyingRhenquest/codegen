@@ -172,6 +172,58 @@ TEST(ParsingData,HowAboutAClass) {
   ASSERT_FALSE(data[className].members[0].generateSetter);
 }
 
+TEST(ParsingData, ClassWithConstructorDestructor) {
+  const std::string classCode(
+  "class Wibble {\n"
+  "int _data;\n"
+  "public:\n"
+  "   Wibble(int data) {\n"
+  "       _data = data;\n"
+  "   }\n"
+  " };\n"
+  );
+
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::ClassDriver driver;
+  std::map<std::string, ClassData> data;
+  std::string className;
+  driver.classAvailable.connect([&className, &data](const std::string& key, const ClassData& value) {
+    className = key;
+    data[className] = value;
+  });
+
+  std::string result;
+  driver.regParser(parser);
+  ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
+  ASSERT_EQ(data.size(), 1);
+  ASSERT_EQ(data[className].name, "Wibble");
+}
+
+TEST(ParsingData, ClassWithInitializerListConstructor) {
+  const std::string classCode(
+  "class Wibble {\n"
+  "int _data;\n"
+  "public:\n"
+  "   Wibble(int data) : _data(data) {}\n"
+  "};\n"
+  );
+
+  fr::codegen::parser::ParserDriver parser;
+  fr::codegen::ClassDriver driver;
+  std::map<std::string, ClassData> data;
+  std::string className;
+  driver.classAvailable.connect([&className, &data](const std::string& key, const ClassData& value) {
+    className = key;
+    data[className] = value;
+  });
+
+  std::string result;
+  driver.regParser(parser);
+  ASSERT_TRUE(parser.parse(classCode.begin(), classCode.end(), result));
+  ASSERT_EQ(data.size(), 1);
+  ASSERT_EQ(data[className].name, "Wibble");
+}
+
 TEST(ParsingData,ClassWithInlineMethod) {
   const std::string classCode(
     "namespace monkey::bagel {"
@@ -242,9 +294,9 @@ TEST(ParsingData,ClassTemplateMethod) {
 TEST(ParsingData,ClassAnnotation) {
   const std::string classCode(
     "namespace monkey::bagel {"
-    "[[cereal]] class Wibble {"
+    "[[=cereal]] class Wibble {"
     "public:"
-    "  [[cereal,get,set]] int wibblewobble;"
+    "  [[=cereal,get,set]] int wibblewobble;"
     "  std::string wobble() { "
     "     std::string ret = \"This should be ignored by the parser\";"
     "     if (wibblewobble) {"

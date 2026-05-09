@@ -88,6 +88,13 @@ namespace fr::codegen::parser {
   auto const annotation_def = x3::lit("[[=") >> *(x3::alnum | x3::space | x3::char_(",_()")) >> x3::lit("]]");
 
   BOOST_SPIRIT_DEFINE(annotation);
+
+  // Initializer List for constructor
+  
+  x3::rule<class InitializerList, std::string> const initializerList = "initializer_list";
+  auto const initializerList_def = x3::char_(':') >> *(x3::char_  - x3::char_("{"));
+
+  BOOST_SPIRIT_DEFINE(initializerList);
   
   // Keywords I don't particularly care about (right now) but that you're likely
   // to encounter before you hit your enum declarations
@@ -425,7 +432,8 @@ namespace fr::codegen::parser {
         -x3::char_('~') >>
         identifier >>
         parameterGrammar >>
-        *(ignoreScopes |
+        *(initializerList |
+          ignoreScopes |
           defaultMethod |
           x3::char_(';'));
 
