@@ -99,6 +99,36 @@ namespace fr::codegen {
   };
 
   /**
+   * Parameter data -- Methods store a vector of these
+   */
+
+  struct ParameterData {
+    std::string type;
+    std::string name;
+    bool typeConst;
+    bool nameConst;
+    
+    // Cereal serialization functions
+
+    template <typename Archive>
+    void save(Archive &ar) const {
+      ar(cereal::make_nvp("type", type));
+      ar(cereal::make_nvp("name", name));
+      ar(cereal::make_nvp("typeConst", typeConst));
+      ar(cereal::make_nvp("nameConst", nameConst));
+    }
+
+    template <typename Archive>
+    void load(Archive &ar) {
+      ar(type);
+      ar(name);
+      ar(typeConst);
+      ar(nameConst);
+    }
+    
+  };
+  
+  /**
    * MethodData -- Stores info on one class/struct method
    *
    * * Return Type
@@ -115,6 +145,7 @@ namespace fr::codegen {
   struct MethodData {
     std::string returnType;
     std::string name;
+    std::vector<ParameterData> parameters;
     bool isPublic;
     bool isProtected;
     bool isVirtual;
@@ -127,6 +158,7 @@ namespace fr::codegen {
     void save(Archive &ar) const {
       ar(cereal::make_nvp("returnType", returnType));
       ar(cereal::make_nvp("name", name));
+      ar(cereal::make_nvp("parameters", parameters));
       ar(cereal::make_nvp("isPublic", isPublic));
       ar(cereal::make_nvp("isProtected", isProtected));
       ar(cereal::make_nvp("isVirtual", isVirtual));
@@ -138,6 +170,7 @@ namespace fr::codegen {
     void load(Archive &ar) {
       ar(returnType);
       ar(name);
+      ar(parameters);
       ar(isPublic);
       ar(isProtected);
       ar(isVirtual);

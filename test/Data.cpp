@@ -366,3 +366,44 @@ TEST(ParsingData, ConstructorDestructorBasic) {
   
   ASSERT_TRUE(gotAClass);  
 }
+
+TEST(ParsingData, Parameters) {
+  const std::string classCode(
+  "struct MyClass {\n"
+  "  void say(const std::string& message, int count) {\n"
+  "     for int(i = 0; i < count; ++i) {\n"
+  "        std::cout << message;\n"
+  "     }\n"
+  "  }\n"
+  "};\n");
+
+  fr::codegen::parser::ParserDriver parser;
+  std::vector<bool> typeConsts;
+  std::vector<bool> nameConsts;
+  std::vector<std::string> types;
+  std::vector<std::string> names;
+  bool parameterFound = false;
+  std::string result;
+  parser.parameterFound.connect([&](const std::string& t,
+                                    const std::string& n,
+                                    bool typeConst,
+                                    bool nameConst) {
+    types.push_back(t);
+    names.push_back(n);
+    typeConsts.push_back(typeConst);
+    nameConsts.push_back(nameConst);
+    parameterFound = true;    
+  });
+
+  parser.parse(classCode.begin(), classCode.end(), result);
+  ASSERT_TRUE(parameterFound);
+  ASSERT_EQ(typeConsts.size(), 2);
+  ASSERT_TRUE(typeConsts[0]);
+  ASSERT_FALSE(typeConsts[1]);
+  ASSERT_FALSE(nameConsts[0]);
+  ASSERT_FALSE(nameConsts[1]);
+  ASSERT_EQ(types[0], "std::string&");
+  ASSERT_EQ(types[1], "int");
+  ASSERT_EQ(names[0], "message");
+  ASSERT_EQ(names[1], "count");
+}

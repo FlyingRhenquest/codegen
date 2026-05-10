@@ -196,6 +196,10 @@ namespace fr::codegen::parser {
     // Signals that we've discovered a method
     // parameters are inClassConst, inClassStatic, inClassVirtual, returnType, methodName
     boost::signals2::signal<void(bool, bool, bool, const std::string&, const std::string&)> methodFound;
+    // We encountered a parameter
+    // parameters are parameter type, parameterName,
+    // parameterTypeConst, parameterNameConst
+    boost::signals2::signal<void(const std::string&, const std::string&, bool, bool)> parameterFound;
     // We encountered an annotation - parameter passed in is the annotation we encountered
     boost::signals2::signal<void(const std::string&)> annotationFound;
 
@@ -205,6 +209,15 @@ namespace fr::codegen::parser {
     bool inClassStatic;
     bool inClassVirtual;
     bool inClassStruct;
+
+    // Some things to track parameter information
+    std::string parameterType;
+    std::string parameterName;
+    bool parameterTypeConst;
+    bool parameterNameConst;
+
+    // Destructor flag
+    bool destructorFlag;
 
     // Store the name of a member or method type
     std::string inClassEnhancedIdentifier;
@@ -220,6 +233,17 @@ namespace fr::codegen::parser {
       inClassIdentifier = "";
     }
 
+    void resetParameterFlags() {
+      parameterType = "";
+      parameterName = "";
+      parameterTypeConst = false;
+      parameterNameConst = false;
+    }
+
+    void resetDestructorFlag() {
+      destructorFlag = false;
+    }
+
     // Shovels data into x3's parser and fires signals. Result will contain any
     // leftover characters. This function works similarly to the boost::spirit::x3
     // parser and can use any iterator the x3 parser will accept.
@@ -227,6 +251,8 @@ namespace fr::codegen::parser {
     bool parse(Iterator first, Iterator last, std::string& result) {
       int scopeDepth = 0;
       resetInClassFlags();
+      resetParameterFlags();
+      resetDestructorFlag();
       // If we're in an enum scope, currentEnumName will be the name of the
       // current enum.
       std::string currentEnumName;
@@ -243,6 +269,10 @@ namespace fr::codegen::parser {
 	x3::_attr(ctx) = "";
       };
 
+      auto handleDestructor = [&](){
+        destructorFlag = true;
+      };
+      
       auto handleScopePush = [&](auto& ctx) {
 	incScope();
 	scopeDepth++;
@@ -342,6 +372,13 @@ namespace fr::codegen::parser {
 	resetInClassFlags();
       };
 
+      auto handleConstructorDestructor = [&](){
+        std::string cd = (destructorFlag ? std::string("destructor") : std::string("constructor"));
+        methodFound(inClassConst, inClassStatic, inClassVirtual, cd, cd);
+        resetInClassFlags();
+        resetDestructorFlag();
+      };
+
       auto handleStructKeyword = [&](){
         inClassStruct = true;
       };
@@ -349,6 +386,28 @@ namespace fr::codegen::parser {
       auto handleAnnotation = [&](auto& ctx){
         annotationFound(x3::_attr(ctx));
         x3::_attr(ctx) = "";
+      };
+
+      auto handleParameterTypeConst = [&]() {
+        parameterTypeConst = true;
+      };
+
+      auto handleParameterType = [&](auto& ctx) {
+        parameterType = x3::_attr(ctx);
+        x3::_attr(ctx) = "";
+      };
+
+      auto handleParameterNameConst = [&]() {
+        parameterNameConst = true;
+      };
+
+      auto handleParameterFound = [&](auto& ctx) {
+        parameterName = x3::_attr(ctx);
+        x3::_attr(ctx) = "";
+        
+        parameterFound(parameterType, parameterName,
+                       parameterTypeConst, parameterNameConst);
+        resetParameterFlags();
       };
 
       // Some grammars I'm ignoring right now
@@ -421,17 +480,24 @@ namespace fr::codegen::parser {
 
       // Simply eat everything in the parameter list. It wouldn't be terribly difficult
       // to parse out, I just don't particualrly need it for anything.
-      auto const parameterGrammar = x3::char_('(') >> *(x3::char_ - x3::char_(')')) >> x3::char_(')');
+      auto const parameterGrammar = x3::char_('(') >>
+        *(-constKeyword [handleParameterTypeConst] >>
+          enhancedIdentifier [handleParameterType] >>
+          -constKeyword [handleParameterNameConst] >>
+          enhancedIdentifier [handleParameterFound] >>
+          -x3::char_(',')
+          ) >>
+        x3::char_(')');
 
       auto const ignoreUsing = x3::lit("using") >> *(x3::char_ - x3::char_(';')) >> x3::char_(';');
       
       auto const defaultMethod = x3::char_('=') >> x3::lit("default");
 
       auto constructorDestructor =
-        *virtualKeyword >>
-        -x3::char_('~') >>
+        -virtualKeyword >>
+        -x3::char_('~') [handleDestructor] >>
         identifier >>
-        parameterGrammar >>
+        parameterGrammar [handleConstructorDestructor] >>
         *(initializerList |
           ignoreScopes |
           defaultMethod |

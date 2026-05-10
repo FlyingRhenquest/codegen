@@ -224,6 +224,12 @@ namespace fr::codegen {
     std::vector<boost::signals2::connection> subscriptions;
     NamespaceDriver namespaces;
     ClassData currentClass;
+    // We receive parameters prior to handleMethod being called
+    // so we just need to push them into this vector when we see
+    // them and copy them into the method when we see handleMethod.
+    // Once they're copied, we need to clear this vector for the
+    // next method.
+    std::vector<ParameterData> parameters;
     bool isPublic;
     bool isPrivate;
     bool isProtected;
@@ -247,6 +253,18 @@ namespace fr::codegen {
       nowPrivate();
       currentClass.isStruct = false;
       inClass = true;
+    }
+
+    void handleParameter(const std::string& type,
+                         const std::string& name,
+                         bool typeConst,
+                         bool nameConst) {
+      ParameterData parameter;
+      parameter.type = type;
+      parameter.name = name;
+      parameter.typeConst = typeConst;
+      parameter.nameConst = nameConst;
+      parameters.push_back(parameter);
     }
 
     void handleStruct(const std::string& name, int scopeDepth) {
@@ -302,6 +320,10 @@ namespace fr::codegen {
       md.isConst = inClassConst;
       md.isStatic = inClassStatic;
       md.isVirtual = inClassVirtual;
+      for(auto& parameter : parameters) {
+        md.parameters.push_back(parameter);
+      }
+      parameters.clear();
       currentClass.methods.push_back(md);
     }
 
@@ -380,6 +402,12 @@ namespace fr::codegen {
       });
       auto annotationFoundSub = parser.annotationFound.connect([&](const std::string& annotationText) {
         handleAnnotation(annotationText);
+      });
+      auto parameterFoundSub = parser.parameterFound.connect([&](const std::string& type,
+                                                                  const std::string& name,
+                                                                  bool typeConst,
+                                                                  bool nameConst) {
+        handleParameter(type, name, typeConst, nameConst);
       });
       subscriptions.push_back(classPushSub);
       subscriptions.push_back(structPushSub);

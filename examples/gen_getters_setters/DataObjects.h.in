@@ -95,6 +95,11 @@ namespace fr::codegen {
       }
     }
 
+    // Set name overload for great justice!
+    void setName(const std::string& name) {
+      _name = name;
+    }
+
     std::string to_string() {
       std::string ret("class: WeirdClass");
       ret.append("\n");
