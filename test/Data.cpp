@@ -294,9 +294,9 @@ TEST(ParsingData,ClassTemplateMethod) {
 TEST(ParsingData,ClassAnnotation) {
   const std::string classCode(
     "namespace monkey::bagel {"
-    "[[=cereal]] class Wibble {"
+    "[[cereal]] class Wibble {"
     "public:"
-    "  [[=cereal,get,set]] int wibblewobble;"
+    "  [[cereal,get,set]] int wibblewobble;"
     "  std::string wobble() { "
     "     std::string ret = \"This should be ignored by the parser\";"
     "     if (wibblewobble) {"

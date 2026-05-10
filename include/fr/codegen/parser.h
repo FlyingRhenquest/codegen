@@ -85,7 +85,7 @@ namespace fr::codegen::parser {
   // and to put places tags in the code that can be replaced later on.
 
   x3::rule<class Annotation, std::string> const annotation = "annotation";
-  auto const annotation_def = x3::lit("[[=") >> *(x3::alnum | x3::space | x3::char_(",_()")) >> x3::lit("]]");
+  auto const annotation_def = x3::lit("[[") >> *(x3::alnum | x3::space | x3::char_(",_()")) >> x3::lit("]]");
 
   BOOST_SPIRIT_DEFINE(annotation);
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
-project(enumsExample)
+project(GettersSettersExample)
 
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)

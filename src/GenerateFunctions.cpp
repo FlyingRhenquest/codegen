@@ -122,9 +122,12 @@ int main(int argc, char *argv[]) {
 
   LblEmitCerealMethods cerealEmitter(classMap);
   cerealEmitter.subscribeTo(getSetEmitter);
+
+  LblEatAnnotations annotationEater(classMap);
+  annotationEater.subscribeTo(cerealEmitter);
   
   LblWriter writer(output);
-  writer.subscribeTo(cerealEmitter);
+  writer.subscribeTo(annotationEater);
 
   reader.process();
 

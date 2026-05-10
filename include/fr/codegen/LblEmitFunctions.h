@@ -276,5 +276,34 @@ namespace fr::codegen {
     }
     
   };
+
+  /**
+   * Eat annotations. Annotations will result in a compiler warning and
+   * generally look weird in code. It would be best to just remove them.
+   * This should be done after all the other filter processing, just
+   * before you emit the final line into the code.
+   */
+
+  class LblEatAnnotations : public LblMiniParserFilter {
+  public:
+    LblEatAnnotations(const ClassMap& classes) : LblMiniParserFilter(classes) {
+    }
+    virtual ~LblEatAnnotations() = default;
+
+    void process(const std::string& line) {
+      std::string lineCopy = line;
+      size_t start = lineCopy.find("[[");
+      size_t end = lineCopy.find("]]");
+
+      while(start != std::string::npos && end != std::string::npos && end > start) {
+        lineCopy.erase(start, (end + 2) - start);
+        start = lineCopy.find("[[");
+        end = lineCopy.find("]]");
+      }
+      
+      emit(lineCopy);
+    }
+    
+  };
   
 }

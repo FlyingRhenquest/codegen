@@ -111,7 +111,7 @@ namespace fr::codegen {
 
     [[genGetSetMethods]]
     // This should not generate any methods
-    [[ genCerealLoadSave]]
+    [[genCerealLoadSave]]
     
   };
   
