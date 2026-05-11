@@ -45,6 +45,30 @@ tested extensively -- see examples/gen\_getters\_setters
 for details. The CMakefile there rewrites DataObjects.h.in to
 DataObjects.h, which is included in ExerciseDataObjects.cpp.
 
+GeneratePythonApi - Generates a Python API for a class declared
+in a header. examples/config_file has an example of this functionality.
+The BuildIt.sh will run the code indexer on Config.h.in, and
+then run GenFunctions on the header to generate cereal load/save
+functions. Once that's done, it'll run GeneratePythonApi on
+the PythonApi.cpp.in file to generate the python API using
+the index. This functionality is VERY new and NOT VERY WELL
+TESTED, but it does seem to work well enough for the moment.
+BuildIt.sh does assume that the top-level programs are in the
+path somewhere, whether you've installed them or set your
+path up to include the top level project build directory.
+
+This has the general IDL problem that you really have to work
+with the .in files, since the IDL overwrites the generated code
+each time. You could just use the .in files once to generate
+your starter code and then never touch the .in files again (or
+delete them.) That's not great though. You could definitely generate
+the files these programs generate into your temporary build
+directory rather than the source one, and then at least you
+wouldn't accidentally edit a .cpp file instead of a .cpp.in
+file. I'll probably clean up the existing cmake instrumentation
+and write a new function for the Python API and have it do that
+by default.
+
 # CMake Instrumentation
 
 When you install this package, the CMake instrumentation in 
@@ -169,8 +193,6 @@ like for handling that.
 
 # Future Plans
 
-* Write some functions to generate APIs for Python with nanobind
-  and emscripten with embind.
 * Write Python APIs (And maybe Emscripten ones too) for the data
   objects.
 * Write python APIs for the Parser and Driver objects.

@@ -15,6 +15,7 @@ option(BUILD_TESTS ON)
 set(HEADER_DIR "include/fr/codegen")
 set(INTERFACE_HEADERS
   "${HEADER_DIR}/parser.h"
+  "${HEADER_DIR}/drivers.h"
   "${HEADER_DIR}/data.h"
 )
 
@@ -53,11 +54,16 @@ add_executable(GenerateFunctions
   "${CMAKE_CURRENT_SOURCE_DIR}/src/GenerateFunctions.cpp"
 )
 
+add_executable(GeneratePythonApi
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/GeneratePythonApi.cpp"
+)
+
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "DEBUG")
   target_compile_definitions(GenerateEnumFunctions PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
   target_compile_definitions(IndexCode PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
   target_compile_definitions(OstreamOpsFromIndex PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
   target_compile_definitions(GenerateFunctions PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
+  target_compile_definitions(GeneratePythonApi PUBLIC BOOST_SPIRIT_DEBUG BOOST_SPIRIT_X3_DEBUG)
 endif()
 
 target_link_libraries(GenerateEnumFunctions PUBLIC
@@ -76,6 +82,11 @@ target_link_libraries(OstreamOpsFromIndex PUBLIC
 )
 
 target_link_libraries(GenerateFunctions PUBLIC
+  FR::codegen
+  Boost::program_options
+)
+
+target_link_libraries(GeneratePythonApi PUBLIC
   FR::codegen
   Boost::program_options
 )
@@ -100,7 +111,7 @@ configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Config.cmake.in
 )
 
 # Install Interface Library
-install(TARGETS frcodegen GenerateEnumFunctions IndexCode OstreamOpsFromIndex GenerateFunctions
+install(TARGETS frcodegen GenerateEnumFunctions IndexCode OstreamOpsFromIndex GenerateFunctions GeneratePythonApi
   EXPORT frcodegen_export
   PUBLIC_HEADER DESTINATION include/fr/codegen
   INCLUDES DESTINATION include/fr/codegen

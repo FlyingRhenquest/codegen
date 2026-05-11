@@ -1,0 +1,155 @@
+{
+    "enums": [],
+    "classes": [
+        {
+            "key": "Config",
+            "value": {
+                "ptr_wrapper": {
+                    "id": 2147483649,
+                    "data": {
+                        "definedIn": "Config.h.in",
+                        "namespaces": [],
+                        "name": "Config",
+                        "parents": [],
+                        "methods": [
+                            {
+                                "returnType": "constructor",
+                                "name": "constructor",
+                                "parameters": [],
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isVirtual": false,
+                                "isConst": false,
+                                "isStatic": false
+                            },
+                            {
+                                "returnType": "std::string",
+                                "name": "to_json",
+                                "parameters": [],
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isVirtual": false,
+                                "isConst": false,
+                                "isStatic": false
+                            },
+                            {
+                                "returnType": "std::string",
+                                "name": "to_xml",
+                                "parameters": [],
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isVirtual": false,
+                                "isConst": false,
+                                "isStatic": false
+                            },
+                            {
+                                "returnType": "void",
+                                "name": "from_json",
+                                "parameters": [
+                                    {
+                                        "type": "std::string&",
+                                        "name": "s",
+                                        "typeConst": true,
+                                        "nameConst": false
+                                    }
+                                ],
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isVirtual": false,
+                                "isConst": false,
+                                "isStatic": false
+                            },
+                            {
+                                "returnType": "void",
+                                "name": "from_xml",
+                                "parameters": [
+                                    {
+                                        "type": "std::string&",
+                                        "name": "s",
+                                        "typeConst": true,
+                                        "nameConst": false
+                                    }
+                                ],
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isVirtual": false,
+                                "isConst": false,
+                                "isStatic": false
+                            }
+                        ],
+                        "members": [
+                            {
+                                "type": "std::string",
+                                "name": "configFileLocation",
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isConst": false,
+                                "isStatic": false,
+                                "serializable": false,
+                                "generateGetter": false,
+                                "generateSetter": false
+                            },
+                            {
+                                "type": "std::string",
+                                "name": "searchPath",
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isConst": false,
+                                "isStatic": false,
+                                "serializable": false,
+                                "generateGetter": false,
+                                "generateSetter": false
+                            },
+                            {
+                                "type": "double",
+                                "name": "gravitationalConstant",
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isConst": false,
+                                "isStatic": false,
+                                "serializable": false,
+                                "generateGetter": false,
+                                "generateSetter": false
+                            },
+                            {
+                                "type": "int",
+                                "name": "numNipples",
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isConst": false,
+                                "isStatic": false,
+                                "serializable": false,
+                                "generateGetter": false,
+                                "generateSetter": false
+                            },
+                            {
+                                "type": "int",
+                                "name": "approximatePi",
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isConst": false,
+                                "isStatic": false,
+                                "serializable": false,
+                                "generateGetter": false,
+                                "generateSetter": false
+                            },
+                            {
+                                "type": "std::string",
+                                "name": "moreText",
+                                "isPublic": true,
+                                "isProtected": false,
+                                "isConst": false,
+                                "isStatic": false,
+                                "serializable": false,
+                                "generateGetter": false,
+                                "generateSetter": false
+                            }
+                        ],
+                        "isStruct": true,
+                        "serializable": true
+                    }
+                }
+            }
+        }
+    ]
+}

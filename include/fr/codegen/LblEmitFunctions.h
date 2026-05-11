@@ -40,7 +40,7 @@ namespace fr::codegen {
 
   // Base classes for other things that need to know class name
   // to subscribe to. All of these need to accept a ClassMap
-  // as defined in IndedCode.cpp
+  // created by IndexCode.cpp
 
   class LblMiniParserFilter : public LblFilter {
   protected:
